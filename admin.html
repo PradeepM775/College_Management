@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — CEMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">CEMS</div>
+        <div class="brand-sub">College Exam Management System</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a class="nav-item active" data-panel="dashboard" onclick="showPanel('dashboard')">Dashboard</a>
+        <a class="nav-item" data-panel="students" onclick="showPanel('students')">Students</a>
+        <a class="nav-item" data-panel="faculty" onclick="showPanel('faculty')">Faculty</a>
+        <a class="nav-item" data-panel="departments" onclick="showPanel('departments')">Departments</a>
+        <a class="nav-item" data-panel="classes" onclick="showPanel('classes')">Classes</a>
+        <a class="nav-item" data-panel="subjects" onclick="showPanel('subjects')">Subjects</a>
+        <div class="nav-section">Examinations</div>
+        <a class="nav-item" data-panel="exams" onclick="showPanel('exams')">Examinations</a>
+        <a class="nav-item" data-panel="halls" onclick="showPanel('halls')">Exam Halls</a>
+        <a class="nav-item" data-panel="seating" onclick="showPanel('seating')">Seating Arrangement</a>
+        <a class="nav-item" data-panel="duties" onclick="showPanel('duties')">Faculty Duties</a>
+        <a class="nav-item" data-panel="attendance" onclick="showPanel('attendance')">Attendance</a>
+        <div class="nav-section">System</div>
+        <a class="nav-item" data-panel="reports" onclick="showPanel('reports')">Reports</a>
+        <a class="nav-item" data-panel="settings" onclick="showPanel('settings')">Settings</a>
+        <a class="nav-item" onclick="App.toggleTheme()">Theme</a>
+        <a class="nav-item" onclick="if(confirm('Reset all data to demo defaults?')){DB.reset().then(function(){location.reload();});}">Reset Data</a>
+        <a class="nav-item" onclick="App.logout()">Logout</a>
+      </nav>
+    </aside>
+
+    <div class="main-content">
+      <header class="topbar">
+        <div class="d-flex align-center gap-2">
+          <button class="menu-toggle" id="menuToggle">Menu</button>
+          <strong id="topTitle" style="font-size:0.95rem;">Dashboard</strong>
+        </div>
+        <div class="topbar-right">
+          <span id="syncStatus" class="text-muted" style="font-size:0.75rem;"></span>
+          <div class="topbar-user"><strong id="adminName">Admin</strong> · Administrator</div>
+          <button class="btn btn-ghost btn-sm" onclick="App.logout()">Logout</button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- DASHBOARD -->
+        <div class="panel active" id="panel-dashboard">
+          <div class="page-header"><div><h2>Dashboard</h2><p class="sub">Full system overview</p></div></div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Total Students</div><div class="stat-value" id="statStudents">0</div></div>
+            <div class="stat-card"><div class="stat-label">Total Faculty</div><div class="stat-value" id="statFaculty">0</div></div>
+            <div class="stat-card"><div class="stat-label">Classes</div><div class="stat-value" id="statClasses">0</div></div>
+            <div class="stat-card"><div class="stat-label">Departments</div><div class="stat-value" id="statDepts">0</div></div>
+            <div class="stat-card"><div class="stat-label">Exam Halls</div><div class="stat-value" id="statHalls">0</div></div>
+            <div class="stat-card"><div class="stat-label">Examinations</div><div class="stat-value" id="statExams">0</div></div>
+            <div class="stat-card"><div class="stat-label">Total Desks</div><div class="stat-value" id="statDesks">0</div></div>
+            <div class="stat-card"><div class="stat-label">Seat Allocations</div><div class="stat-value" id="statSeatings">0</div></div>
+          </div>
+          <div class="card"><div class="card-header">Students by Department</div><div class="card-body" id="deptChart"></div></div>
+        </div>
+
+        <!-- STUDENTS -->
+        <div class="panel" id="panel-students">
+          <div class="page-header">
+            <div><h2>Students</h2><p class="sub">Add, edit and remove students</p></div>
+            <button class="btn btn-primary" onclick="openAddStudent()">Add Student</button>
+          </div>
+          <div class="filters-bar">
+            <input type="text" class="form-control" id="stuSearch" placeholder="Search name or register number…" oninput="loadStudentsPanel()">
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Register Number</th><th>Name</th><th>Gender</th><th>Department</th><th>Class</th><th>Year</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="studentsBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- FACULTY -->
+        <div class="panel" id="panel-faculty">
+          <div class="page-header">
+            <div><h2>Faculty</h2><p class="sub">Manage faculty and login passwords</p></div>
+            <button class="btn btn-primary" onclick="openAddFaculty()">Add Faculty</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Faculty ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="facultyBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- DEPARTMENTS -->
+        <div class="panel" id="panel-departments">
+          <div class="page-header">
+            <div><h2>Departments</h2><p class="sub">Manage academic departments</p></div>
+            <button class="btn btn-primary" onclick="openAddDept()">Add Department</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Code</th><th>Name</th><th>Status</th><th>Students</th><th>Actions</th></tr></thead>
+            <tbody id="deptBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- CLASSES -->
+        <div class="panel" id="panel-classes">
+          <div class="page-header">
+            <div><h2>Classes</h2><p class="sub">Manage classes and sections</p></div>
+            <button class="btn btn-primary" onclick="openAddClass()">Add Class</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Class Name</th><th>Department</th><th>Course</th><th>Year</th><th>Section</th><th>Academic Year</th><th>Students</th><th>Actions</th></tr></thead>
+            <tbody id="classBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- SUBJECTS -->
+        <div class="panel" id="panel-subjects">
+          <div class="page-header">
+            <div><h2>Subjects</h2><p class="sub">Manage subjects and codes</p></div>
+            <button class="btn btn-primary" onclick="openAddSubject()">Add Subject</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>Semester</th><th>Credits</th><th>Actions</th></tr></thead>
+            <tbody id="subjectBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- EXAMS -->
+        <div class="panel" id="panel-exams">
+          <div class="page-header">
+            <div><h2>Examinations</h2><p class="sub">Create and manage exams</p></div>
+            <button class="btn btn-primary" onclick="openAddExam()">Add Examination</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Exam ID</th><th>Name</th><th>Subject</th><th>Date</th><th>Time</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="examsBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- HALLS -->
+        <div class="panel" id="panel-halls">
+          <div class="page-header">
+            <div><h2>Exam Halls</h2><p class="sub">Manage halls and capacity</p></div>
+            <button class="btn btn-primary" onclick="openAddHall()">Add Hall</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Hall Number</th><th>Building</th><th>Block</th><th>Floor</th><th>Rows × Cols</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="hallsBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- SEATING -->
+        <div class="panel" id="panel-seating">
+          <div class="page-header"><div><h2>Seating Arrangement</h2><p class="sub">Generate and review seating</p></div></div>
+          <div class="card mb-3">
+            <div class="card-header">Generate Seating</div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Examination</label><select class="form-control" id="seatExam"></select></div>
+                <div class="form-group"><label class="form-label">Strategy</label>
+                  <select class="form-control" id="seatStrategy">
+                    <option value="alternate">Alternate Department</option>
+                    <option value="sequential">Sequential</option>
+                    <option value="random">Random</option>
+                    <option value="random_dept">Random + Department Separation</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group"><label class="form-label">Exam Halls</label><div id="hallChecks" class="d-flex gap-2 flex-wrap"></div></div>
+              <div class="d-flex gap-1">
+                <button class="btn btn-primary" onclick="generateSeating()">Generate Seating Arrangement</button>
+                <button class="btn btn-secondary" onclick="viewSeating()">View Seating</button>
+                <button class="btn btn-danger" onclick="clearSeating()">Clear Seating</button>
+              </div>
+            </div>
+          </div>
+          <div id="seatingResult"></div>
+        </div>
+
+        <!-- DUTIES -->
+        <div class="panel" id="panel-duties">
+          <div class="page-header">
+            <div><h2>Faculty Duties</h2><p class="sub">Assign and manage exam supervision duties</p></div>
+            <button class="btn btn-primary" onclick="openAddDuty()">Assign Duty</button>
+          </div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Faculty</th><th>Exam</th><th>Subject</th><th>Hall</th><th>Date</th><th>Time</th><th>Duty Type</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="dutiesBody"></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- ATTENDANCE -->
+        <div class="panel" id="panel-attendance">
+          <div class="page-header"><div><h2>Attendance</h2><p class="sub">View and mark examination attendance</p></div></div>
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Examination</label><select class="form-control" id="attExam" onchange="loadAdminAttendance()"></select></div>
+                <div class="form-group"><label class="form-label">Hall (optional)</label><select class="form-control" id="attHall" onchange="loadAdminAttendance()"><option value="">All Halls</option></select></div>
+              </div>
+            </div>
+          </div>
+          <div id="attSummary" class="stats-grid" style="display:none;"></div>
+          <div class="card"><div class="table-responsive"><table>
+            <thead><tr><th>Register Number</th><th>Name</th><th>Department</th><th>Hall</th><th>Desk</th><th>Status</th></tr></thead>
+            <tbody id="attBody"><tr><td colspan="6" class="text-center text-muted">Select an examination</td></tr></tbody>
+          </table></div>
+          <div class="card-body d-flex gap-1" id="attActions" style="display:none !important;"></div>
+          </div>
+        </div>
+
+        <!-- REPORTS -->
+        <div class="panel" id="panel-reports">
+          <div class="page-header"><div><h2>Reports</h2><p class="sub">View and export system reports</p></div></div>
+          <div class="stats-grid" id="reportCards"></div>
+          <div class="card mt-3">
+            <div class="card-header">Export</div>
+            <div class="card-body d-flex gap-2 flex-wrap">
+              <button class="btn btn-secondary" onclick="exportCSV('students')">Export Students CSV</button>
+              <button class="btn btn-secondary" onclick="exportCSV('faculty')">Export Faculty CSV</button>
+              <button class="btn btn-secondary" onclick="exportCSV('exams')">Export Exams CSV</button>
+              <button class="btn btn-secondary" onclick="exportCSV('seatings')">Export Seating CSV</button>
+              <button class="btn btn-secondary" onclick="exportCSV('attendance')">Export Attendance CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="panel" id="panel-settings">
+          <div class="page-header"><div><h2>Settings</h2><p class="sub">College and system configuration</p></div></div>
+          <div class="card" style="max-width:560px;">
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">College Name</label><input type="text" class="form-control" id="setCollege"></div>
+              <div class="form-group"><label class="form-label">Academic Year</label><input type="text" class="form-control" id="setYear"></div>
+              <div class="form-group"><label class="form-label">Default Seating Strategy</label>
+                <select class="form-control" id="setStrategy">
+                  <option value="alternate">Alternate Department</option>
+                  <option value="sequential">Sequential</option>
+                  <option value="random">Random</option>
+                  <option value="random_dept">Random + Department Separation</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Google Sheets URL</label>
+                <input type="text" class="form-control" id="setSheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                <p class="text-muted mt-1" style="font-size:0.8rem;">Leave empty to use browser storage only. Change requires editing js/db.js permanently, or paste here for this session.</p>
+              </div>
+              <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Modal -->
+  <div class="modal-overlay" id="studentModal"><div class="modal">
+    <div class="modal-header"><h3 id="stuModalTitle">Add Student</h3><button class="modal-close" onclick="App.closeModal('studentModal')">&times;</button></div>
+    <div class="modal-body"><form id="stuForm"><input type="hidden" id="stuId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Register Number</label><input type="text" class="form-control" id="stuReg" required></div>
+        <div class="form-group"><label class="form-label">Student Name</label><input type="text" class="form-control" id="stuName" required></div>
+        <div class="form-group"><label class="form-label">Gender</label><select class="form-control" id="stuGender"><option>Male</option><option>Female</option><option>Other</option></select></div>
+        <div class="form-group"><label class="form-label">Year</label><select class="form-control" id="stuYear"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select></div>
+        <div class="form-group"><label class="form-label">Department</label><select class="form-control" id="stuDept"></select></div>
+        <div class="form-group"><label class="form-label">Class</label><select class="form-control" id="stuClass"></select></div>
+        <div class="form-group"><label class="form-label">Course</label><input type="text" class="form-control" id="stuCourse"></div>
+        <div class="form-group"><label class="form-label">Academic Year</label><input type="text" class="form-control" id="stuAcademicYear" value="2025-26"></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="stuEmail"></div>
+        <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-control" id="stuPhone"></div>
+        <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="stuStatus"><option>Active</option><option>Inactive</option></select></div>
+      </div>
+    </form></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('studentModal')">Cancel</button><button class="btn btn-primary" onclick="saveStudent()">Save Student</button></div>
+  </div></div>
+
+  <!-- Faculty Modal -->
+  <div class="modal-overlay" id="facultyModal"><div class="modal">
+    <div class="modal-header"><h3 id="facModalTitle">Add Faculty</h3><button class="modal-close" onclick="App.closeModal('facultyModal')">&times;</button></div>
+    <div class="modal-body"><form id="facForm"><input type="hidden" id="facId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Faculty ID</label><input type="text" class="form-control" id="facCode" required></div>
+        <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-control" id="facName" required></div>
+        <div class="form-group"><label class="form-label">Department</label><select class="form-control" id="facDept"></select></div>
+        <div class="form-group"><label class="form-label">Designation</label><select class="form-control" id="facDesig"><option>Professor</option><option>Associate Professor</option><option>Assistant Professor</option><option>Lecturer</option></select></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="facEmail"></div>
+        <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-control" id="facPhone"></div>
+        <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="facStatus"><option>Active</option><option>Inactive</option></select></div>
+        <div class="form-group"><label class="form-label">Login Password <span class="text-muted" id="facPwHint" style="font-weight:400;"></span></label><input type="text" class="form-control" id="facPassword"></div>
+      </div>
+    </form></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('facultyModal')">Cancel</button><button class="btn btn-primary" onclick="saveFaculty()">Save Faculty</button></div>
+  </div></div>
+
+  <!-- Department Modal -->
+  <div class="modal-overlay" id="deptModal"><div class="modal">
+    <div class="modal-header"><h3 id="deptModalTitle">Add Department</h3><button class="modal-close" onclick="App.closeModal('deptModal')">&times;</button></div>
+    <div class="modal-body"><input type="hidden" id="deptId">
+      <div class="form-group"><label class="form-label">Code</label><input type="text" class="form-control" id="deptCode" placeholder="e.g. BSC-CS"></div>
+      <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-control" id="deptName"></div>
+      <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="deptStatus"><option>Active</option><option>Inactive</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('deptModal')">Cancel</button><button class="btn btn-primary" onclick="saveDept()">Save Department</button></div>
+  </div></div>
+
+  <!-- Class Modal -->
+  <div class="modal-overlay" id="classModal"><div class="modal">
+    <div class="modal-header"><h3 id="classModalTitle">Add Class</h3><button class="modal-close" onclick="App.closeModal('classModal')">&times;</button></div>
+    <div class="modal-body"><input type="hidden" id="classId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Class Name</label><input type="text" class="form-control" id="className" placeholder="e.g. II B.Sc CS"></div>
+        <div class="form-group"><label class="form-label">Department</label><select class="form-control" id="classDept"></select></div>
+        <div class="form-group"><label class="form-label">Course</label><input type="text" class="form-control" id="classCourse"></div>
+        <div class="form-group"><label class="form-label">Year</label><select class="form-control" id="classYear"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+        <div class="form-group"><label class="form-label">Section</label><input type="text" class="form-control" id="classSection" value="A"></div>
+        <div class="form-group"><label class="form-label">Academic Year</label><input type="text" class="form-control" id="classAcadYear" value="2025-26"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('classModal')">Cancel</button><button class="btn btn-primary" onclick="saveClass()">Save Class</button></div>
+  </div></div>
+
+  <!-- Subject Modal -->
+  <div class="modal-overlay" id="subjectModal"><div class="modal">
+    <div class="modal-header"><h3 id="subModalTitle">Add Subject</h3><button class="modal-close" onclick="App.closeModal('subjectModal')">&times;</button></div>
+    <div class="modal-body"><input type="hidden" id="subId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Subject Code</label><input type="text" class="form-control" id="subCode"></div>
+        <div class="form-group"><label class="form-label">Subject Name</label><input type="text" class="form-control" id="subName"></div>
+        <div class="form-group"><label class="form-label">Department</label><select class="form-control" id="subDept"></select></div>
+        <div class="form-group"><label class="form-label">Semester</label><input type="number" class="form-control" id="subSem" min="1" max="8" value="3"></div>
+        <div class="form-group"><label class="form-label">Credits</label><input type="number" class="form-control" id="subCredits" min="1" max="10" value="4"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('subjectModal')">Cancel</button><button class="btn btn-primary" onclick="saveSubject()">Save Subject</button></div>
+  </div></div>
+
+  <!-- Hall Modal -->
+  <div class="modal-overlay" id="hallModal"><div class="modal">
+    <div class="modal-header"><h3 id="hallModalTitle">Add Exam Hall</h3><button class="modal-close" onclick="App.closeModal('hallModal')">&times;</button></div>
+    <div class="modal-body"><input type="hidden" id="hallId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Hall Number</label><input type="text" class="form-control" id="hallNum" required></div>
+        <div class="form-group"><label class="form-label">Building</label><input type="text" class="form-control" id="hallBuilding" required></div>
+        <div class="form-group"><label class="form-label">Block</label><input type="text" class="form-control" id="hallBlock"></div>
+        <div class="form-group"><label class="form-label">Floor</label><input type="text" class="form-control" id="hallFloor" required></div>
+        <div class="form-group"><label class="form-label">Rows</label><input type="number" class="form-control" id="hallRows" min="1" max="20" value="5"></div>
+        <div class="form-group"><label class="form-label">Columns</label><input type="number" class="form-control" id="hallCols" min="1" max="20" value="6"></div>
+        <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="hallStatus"><option>Available</option><option>Maintenance</option><option>Unavailable</option></select></div>
+      </div>
+      <p class="text-muted" style="font-size:0.8rem;">For new halls, desks are created as Rows × Columns. Editing layout on existing halls does not rebuild desks.</p>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('hallModal')">Cancel</button><button class="btn btn-primary" onclick="saveHall()">Save Hall</button></div>
+  </div></div>
+
+  <!-- Exam Modal -->
+  <div class="modal-overlay" id="examModal"><div class="modal">
+    <div class="modal-header"><h3 id="examModalTitle">Add Examination</h3><button class="modal-close" onclick="App.closeModal('examModal')">&times;</button></div>
+    <div class="modal-body"><input type="hidden" id="examId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Exam ID</label><input type="text" class="form-control" id="examCode" required></div>
+        <div class="form-group"><label class="form-label">Exam Name</label><input type="text" class="form-control" id="examName" required></div>
+        <div class="form-group full"><label class="form-label">Subject</label><select class="form-control" id="examSubject"></select></div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-control" id="examDate" required></div>
+        <div class="form-group"><label class="form-label">Exam Type</label><select class="form-control" id="examType"><option>Semester Exam</option><option>Midterm</option><option>Common Test</option><option>Practical</option></select></div>
+        <div class="form-group"><label class="form-label">Start Time</label><input type="time" class="form-control" id="examStart" value="10:00"></div>
+        <div class="form-group"><label class="form-label">End Time</label><input type="time" class="form-control" id="examEnd" value="13:00"></div>
+        <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="examStatus"><option>Upcoming</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Eligible Classes</label><div id="examClassChecks" class="d-flex gap-2 flex-wrap"></div></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('examModal')">Cancel</button><button class="btn btn-primary" onclick="saveExam()">Save Examination</button></div>
+  </div></div>
+
+  <!-- Duty Modal -->
+  <div class="modal-overlay" id="dutyModal"><div class="modal">
+    <div class="modal-header"><h3 id="dutyModalTitle">Assign Duty</h3><button class="modal-close" onclick="App.closeModal('dutyModal')">&times;</button></div>
+    <div class="modal-body"><input type="hidden" id="dutyId">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Faculty</label><select class="form-control" id="dutyFaculty"></select></div>
+        <div class="form-group"><label class="form-label">Examination</label><select class="form-control" id="dutyExam"></select></div>
+        <div class="form-group"><label class="form-label">Hall</label><select class="form-control" id="dutyHall"></select></div>
+        <div class="form-group"><label class="form-label">Duty Type</label><select class="form-control" id="dutyType"><option>Chief Superintendent</option><option>Hall Supervisor</option><option>Assistant Supervisor</option></select></div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-control" id="dutyDate"></div>
+        <div class="form-group"><label class="form-label">Status</label><select class="form-control" id="dutyStatus"><option>Assigned</option><option>Completed</option><option>Cancelled</option></select></div>
+        <div class="form-group"><label class="form-label">Start Time</label><input type="time" class="form-control" id="dutyStart" value="10:00"></div>
+        <div class="form-group"><label class="form-label">End Time</label><input type="time" class="form-control" id="dutyEnd" value="13:00"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('dutyModal')">Cancel</button><button class="btn btn-primary" onclick="saveDuty()">Save Duty</button></div>
+  </div></div>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    DB.initPromise.then(function () {
+      const session = App.requireAuth('admin');
+      if (session) {
+        document.getElementById('adminName').textContent = session.name || session.username;
+        loadAdminDashboard();
+        updateSyncStatus();
+      }
+    });
+    document.getElementById('menuToggle').addEventListener('click', function () {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('active');
+    });
+    document.getElementById('sidebarOverlay').addEventListener('click', function () {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('active');
+    });
+    function updateSyncStatus() {
+      var el = document.getElementById('syncStatus');
+      if (!el) return;
+      if (DB.useGoogle()) {
+        el.textContent = DB.syncState === 'online' ? 'Sheet synced' : (DB.syncState === 'saving' ? 'Saving…' : DB.syncState);
+      } else {
+        el.textContent = 'Local storage';
+      }
+    }
+    setInterval(updateSyncStatus, 2000);
+  </script>
+</body>
+</html>

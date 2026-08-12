@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CEMS — College Exam Management System</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <span class="brand-name">CEMS</span>
+      <span class="brand-sub">College Exam Management System</span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Menu">Menu</button>
+    <ul class="navbar-nav" id="navMenu">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="#timetable">Examinations</a></li>
+      <li><a href="#timetable">Timetable</a></li>
+      <li><a href="find-seat.html">Student</a></li>
+      <li><a href="login.html">Faculty</a></li>
+      <li><a href="login.html" class="btn btn-primary btn-sm">Admin Login</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <h1>College Examination<br><span>Management Made Simple</span></h1>
+        <p>Manage examinations, seating arrangements, student attendance and faculty duties through one centralized platform.</p>
+        <div class="hero-actions">
+          <a href="login.html" class="btn btn-primary btn-lg">Admin Login</a>
+          <a href="find-seat.html" class="btn btn-secondary btn-lg">Find My Seat</a>
+        </div>
+      </div>
+      <div class="hero-preview">
+        <div class="hero-preview-label">System Overview</div>
+        <div class="preview-row">
+          <div class="preview-card">
+            <div class="pc-label">Students</div>
+            <div class="pc-value" id="previewStudents">—</div>
+          </div>
+          <div class="preview-card">
+            <div class="pc-label">Examinations</div>
+            <div class="pc-value" id="previewExams">—</div>
+          </div>
+          <div class="preview-card">
+            <div class="pc-label">Halls</div>
+            <div class="pc-value" id="previewHalls">—</div>
+          </div>
+        </div>
+        <table class="preview-table">
+          <thead>
+            <tr><th>Subject</th><th>Date</th><th>Hall</th><th>Status</th></tr>
+          </thead>
+          <tbody id="previewTable">
+            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="timetable">
+    <div class="section-header">
+      <h2>Upcoming Examination Timetable</h2>
+      <p>Scheduled examinations across all departments</p>
+    </div>
+    <div class="filters-bar">
+      <input type="text" class="form-control" id="ttSearch" placeholder="Search subject…">
+      <select class="form-control" id="ttDept"><option value="">All Departments</option></select>
+      <input type="date" class="form-control" id="ttDate">
+      <button class="btn btn-secondary btn-sm" onclick="filterTimetable()">Search</button>
+    </div>
+    <div class="card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Exam Date</th>
+              <th>Day</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Class</th>
+              <th>Department</th>
+              <th>Exam Type</th>
+            </tr>
+          </thead>
+          <tbody id="timetableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p><strong>CEMS</strong></p>
+    <p style="margin-top:0.4rem;">College Exam Management &amp; Seating System</p>
+  </footer>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.getElementById('hamburger')?.addEventListener('click', () => {
+      document.getElementById('navMenu').classList.toggle('open');
+    });
+    loadHomeTimetable();
+    // Preview stats
+    const d = DB.get();
+    document.getElementById('previewStudents').textContent = d.students.filter(s => s.status === 'Active').length;
+    document.getElementById('previewExams').textContent = d.exams.length;
+    document.getElementById('previewHalls').textContent = d.halls.length;
+    const exams = d.exams.filter(e => e.status === 'Upcoming').slice(0, 3);
+    const pt = document.getElementById('previewTable');
+    if (exams.length) {
+      pt.innerHTML = exams.map(e => {
+        const seat = d.seatings.find(s => s.exam_id === e.id);
+        const hall = seat ? App.hallById(seat.hall_id) : null;
+        return `<tr>
+          <td>${App.subjectName(e.subject_id)}</td>
+          <td>${App.formatDate(e.date)}</td>
+          <td>${hall ? hall.hall_number : '—'}</td>
+          <td><span class="badge badge-info">${e.status}</span></td>
+        </tr>`;
+      }).join('');
+    } else {
+      pt.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">No upcoming exams</td></tr>';
+    }
+  </script>
+</body>
+</html>

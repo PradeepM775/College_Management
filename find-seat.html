@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Your Seat — CEMS</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .seat-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 3rem;
+    }
+    .seat-page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .seat-page-header h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .seat-page-header p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .search-card .card-body {
+      padding: 1.5rem 1.75rem;
+    }
+    .search-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    .search-row .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .search-row .btn {
+      flex-shrink: 0;
+      height: 44px;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+    #resultArea {
+      margin-top: 1.5rem;
+    }
+    #resultArea .result-card {
+      max-width: 100%;
+    }
+    #resultArea .seating-grid {
+      overflow-x: auto;
+      max-width: 100%;
+      padding-bottom: 0.5rem;
+    }
+    @media (max-width: 576px) {
+      .search-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-row .btn {
+        width: 100%;
+      }
+      .seat-page {
+        padding: 1.5rem 1rem 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <span class="brand-name">CEMS</span>
+      <span class="brand-sub">College Exam Management System</span>
+    </a>
+    <a href="index.html" class="btn btn-secondary btn-sm">Back to Home</a>
+  </nav>
+
+  <div class="seat-page">
+    <div class="seat-page-header">
+      <h1>Find Your Examination Seat</h1>
+      <p>Enter your register number to view your examination hall and assigned desk.</p>
+    </div>
+
+    <div class="card search-card">
+      <div class="card-body">
+        <form id="seatSearchForm" onsubmit="findSeat(event)">
+          <div class="search-row">
+            <div class="form-group">
+              <label class="form-label" for="regNumber">Register Number</label>
+              <input type="text" id="regNumber" class="form-control"
+                placeholder="e.g. 24001"
+                style="font-size:1rem;padding:11px 14px;height:44px;"
+                required autocomplete="off" inputmode="numeric">
+            </div>
+            <button type="submit" class="btn btn-primary">Find My Seat</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="resultArea"></div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

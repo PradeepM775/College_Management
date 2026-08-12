@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Portal — CEMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <span class="brand-name">CEMS</span>
+      <span class="brand-sub">Faculty Portal</span>
+    </a>
+    <div class="d-flex gap-1 align-center">
+      <button class="btn btn-ghost btn-sm" onclick="App.toggleTheme()">Theme</button>
+      <button class="btn btn-secondary btn-sm" onclick="App.logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="section" style="max-width:960px;">
+    <div id="facultyInfo" class="mb-3"></div>
+
+    <div class="card mb-3">
+      <div class="card-header">Today's Duties</div>
+      <div class="card-body" id="todayDuties"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Upcoming Duties</div>
+      <div class="card-body" id="upcomingDuties"></div>
+    </div>
+
+    <div id="attendancePanel" class="card mt-3" style="display:none;">
+      <div class="card-header">Examination Attendance</div>
+      <div class="card-body" id="attendanceBody"></div>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    const session = App.requireAuth('faculty');
+    if (session) loadFacultyDashboard();
+  </script>
+</body>
+</html>
