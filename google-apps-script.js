@@ -1,90 +1,96 @@
 /**
- * CEMS — Google Apps Script Backend
- * ===================================
- * SETUP:
- * 1. Open your Google Sheet
- * 2. Extensions → Apps Script → paste this full file → Save
- * 3. Deploy → New deployment → Web app
- *    Execute as: Me | Who has access: Anyone
- * 4. Copy Web App URL into js/db.js → GOOGLE_SCRIPT_URL
+ * CEMS — Google Apps Script (FULL REPLACE)
+ * ========================================
+ * 1. Extensions → Apps Script
+ * 2. Delete ALL old code
+ * 3. Paste THIS entire file
+ * 4. Save
+ * 5. Deploy → Manage deployments → pencil → Version: New version → Deploy
  *
- * OPTIONAL — Students import tab:
- * Create a sheet tab named "Students" with header row:
- * register_number | name | gender | department_code | class_name | year | email | phone
+ * Supported actions:
+ *   load, save, ping, importStudents, listSheets
  */
 
 var DATA_SHEET = 'CEMS_DATA';
-var STUDENTS_TAB = 'Students';
 
 function doGet(e) {
-  try {
-    var action = (e && e.parameter && e.parameter.action) || 'load';
-    var p = e && e.parameter ? e.parameter : {};
-
-    if (action === 'load') {
-      return jsonResponse({ success: true, data: loadDatabase() });
-    }
-    if (action === 'ping') {
-      return jsonResponse({ success: true, message: 'CEMS Google Sheet API is online' });
-    }
-    if (action === 'importStudents') {
-      var tab = p.sheet || STUDENTS_TAB;
-      return jsonResponse({ success: true, rows: readSheetAsObjects_(tab), sheet: tab });
-    }
-    if (action === 'listSheets') {
-      return jsonResponse({ success: true, sheets: listSheetNames_() });
-    }
-    return jsonResponse({ success: false, message: 'Unknown action' });
-  } catch (err) {
-    return jsonResponse({ success: false, message: String(err) });
-  }
+  return handleRequest_(e, null);
 }
 
 function doPost(e) {
+  var body = {};
   try {
-    var body = {};
     if (e && e.postData && e.postData.contents) {
       body = JSON.parse(e.postData.contents);
     }
-    var action = body.action || 'save';
-
-    if (action === 'save') {
-      if (!body.data) return jsonResponse({ success: false, message: 'No data provided' });
-      saveDatabase(body.data);
-      return jsonResponse({ success: true, message: 'Saved' });
-    }
-    if (action === 'load') {
-      return jsonResponse({ success: true, data: loadDatabase() });
-    }
-    if (action === 'importStudents') {
-      var tab = body.sheet || STUDENTS_TAB;
-      return jsonResponse({ success: true, rows: readSheetAsObjects_(tab), sheet: tab });
-    }
-    return jsonResponse({ success: false, message: 'Unknown action' });
   } catch (err) {
-    return jsonResponse({ success: false, message: String(err) });
+    return json_({ success: false, message: 'Invalid JSON body: ' + err });
+  }
+  return handleRequest_(e, body);
+}
+
+function handleRequest_(e, body) {
+  try {
+    body = body || {};
+    var params = (e && e.parameter) ? e.parameter : {};
+    var action = body.action || params.action || 'load';
+    action = String(action).toLowerCase().replace(/[^a-z]/g, '');
+
+    // aliases
+    if (action === 'import' || action === 'importsheet' || action === 'readsheet') {
+      action = 'importstudents';
+    }
+
+    if (action === 'ping' || action === 'health') {
+      return json_({ success: true, message: 'CEMS API online', version: 3 });
+    }
+
+    if (action === 'load' || action === 'get') {
+      return json_({ success: true, data: loadDatabase_() });
+    }
+
+    if (action === 'save' || action === 'put') {
+      if (!body.data) return json_({ success: false, message: 'No data provided' });
+      saveDatabase_(body.data);
+      return json_({ success: true, message: 'Saved' });
+    }
+
+    if (action === 'importstudents') {
+      var tab = body.sheet || params.sheet || 'Students';
+      var rows = readSheetAsObjects_(tab);
+      return json_({ success: true, rows: rows, sheet: tab, count: rows.length });
+    }
+
+    if (action === 'listsheets') {
+      return json_({ success: true, sheets: listSheetNames_() });
+    }
+
+    return json_({
+      success: false,
+      message: 'Unknown action: ' + action + '. Deploy latest google-apps-script.js (version 3).'
+    });
+  } catch (err) {
+    return json_({ success: false, message: String(err) });
   }
 }
 
-function jsonResponse(obj) {
+function json_(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function listSheetNames_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheets().map(function (s) { return s.getName(); });
+  return SpreadsheetApp.getActiveSpreadsheet().getSheets().map(function (s) {
+    return s.getName();
+  });
 }
 
-/**
- * Reads first row as headers, remaining rows as objects.
- */
 function readSheetAsObjects_(sheetName) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
-    throw new Error('Sheet tab not found: ' + sheetName + '. Create a tab named "' + sheetName + '" with student columns.');
+    throw new Error('Sheet tab not found: "' + sheetName + '". Create that tab with a header row.');
   }
   var values = sheet.getDataRange().getValues();
   if (!values || values.length < 2) return [];
@@ -102,7 +108,6 @@ function readSheetAsObjects_(sheetName) {
       if (!headers[c]) continue;
       var val = row[c];
       if (val !== null && val !== undefined && String(val).trim() !== '') empty = false;
-      // Dates → ISO date string
       if (Object.prototype.toString.call(val) === '[object Date]' && !isNaN(val)) {
         val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
       }
@@ -124,7 +129,7 @@ function getDataSheet_() {
   return sheet;
 }
 
-function loadDatabase() {
+function loadDatabase_() {
   var sheet = getDataSheet_();
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return null;
@@ -156,13 +161,14 @@ function loadDatabase() {
     duties: map.duties || [],
     attendance: map.attendance || [],
     history: map.history || [],
+    admin_lock: map.admin_lock || null,
     settings: map.settings || {},
     session: null,
     seeded: !!map.seeded
   };
 }
 
-function saveDatabase(data) {
+function saveDatabase_(data) {
   var sheet = getDataSheet_();
   sheet.clearContents();
   sheet.getRange(1, 1, 1, 2).setValues([['key', 'value']]);
@@ -179,7 +185,8 @@ function saveDatabase(data) {
     ['seatings_count', String((clone.seatings || []).length)]
   ];
   var listKeys = ['users', 'departments', 'classes', 'students', 'faculty', 'subjects',
-    'halls', 'desks', 'exams', 'participants', 'seatings', 'duties', 'attendance', 'history', 'settings'];
+    'halls', 'desks', 'exams', 'participants', 'seatings', 'duties', 'attendance',
+    'history', 'admin_lock', 'settings'];
   for (var i = 0; i < listKeys.length; i++) {
     var k = listKeys[i];
     if (clone[k] !== undefined) rows.push([k, JSON.stringify(clone[k])]);
@@ -187,16 +194,4 @@ function saveDatabase(data) {
   sheet.getRange(2, 1, rows.length, 2).setValues(rows);
   sheet.setColumnWidth(1, 160);
   sheet.setColumnWidth(2, 600);
-}
-
-function testSaveLoad() {
-  var sample = {
-    seeded: true,
-    users: [{ id: 1, username: 'admin', role: 'admin' }],
-    students: [], faculty: [], departments: [], classes: [], subjects: [],
-    halls: [], desks: [], exams: [], participants: [], seatings: [],
-    duties: [], attendance: [], settings: { college_name: 'Test College' }, session: null
-  };
-  saveDatabase(sample);
-  Logger.log(JSON.stringify(loadDatabase()).substring(0, 200));
 }

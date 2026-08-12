@@ -33,8 +33,24 @@ const App = {
     try { sessionStorage.setItem('cems_session', JSON.stringify(user)); } catch (e) {}
   },
 
-  logout() {
-    DB.update(d => { d.session = null; });
+  async logout() {
+    try {
+      const s = this.getSession();
+      if (s && s.role === 'admin') {
+        await DB.refreshFromRemote();
+        DB.update(d => {
+          if (d.admin_lock && d.admin_lock.device_id === DB.getDeviceId()) {
+            d.admin_lock = null;
+          }
+          d.session = null;
+        });
+        DB.log('Admin logout', 'Device ' + DB.getDeviceId());
+      } else {
+        DB.update(d => { d.session = null; });
+      }
+    } catch (e) {
+      DB.update(d => { d.session = null; });
+    }
     try { sessionStorage.removeItem('cems_session'); } catch (e) {}
     window.location.href = 'index.html';
   },
@@ -106,46 +122,91 @@ function handleLogin(e) {
   e.preventDefault();
   const username = document.getElementById('username').value.trim().toLowerCase();
   const password = document.getElementById('password').value;
+  const btn = e.target && e.target.querySelector ? e.target.querySelector('button[type="submit"]') : null;
 
   if (!username || !password) {
     App.toast('Enter username and password', 'warning');
     return;
   }
 
-  function doLogin() {
-    const data = DB.get();
-    // Ensure users exist
-    if (!data.users || !data.users.length) {
-      const seeded = DB.buildSeed();
-      DB._cache = seeded;
-      DB.saveLocal(seeded);
+  async function doLogin() {
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+    try {
+      // Pull latest shared DB (lock lives here)
+      await DB.refreshFromRemote();
+
+      let data = DB.get();
+      if (!data.users || !data.users.length) {
+        const seeded = DB.buildSeed();
+        DB._cache = seeded;
+        DB.saveLocal(seeded);
+        if (DB.useGoogle()) await DB.pushToGoogle(seeded);
+        data = DB.get();
+      }
+
+      const user = (data.users || []).find(u =>
+        String(u.username).toLowerCase() === username &&
+        u.password === DB.hash(password)
+      );
+
+      if (!user) {
+        App.toast('Invalid username or password', 'error');
+        return;
+      }
+
+      // Single-device admin lock
+      if (user.role === 'admin') {
+        const deviceId = DB.getDeviceId();
+        const lock = data.admin_lock;
+        if (DB.isAdminLockActive(lock) && lock.device_id !== deviceId) {
+          const when = lock.last_seen || lock.locked_at || '';
+          const msg =
+            'Admin is already logged in on another device.\n\n' +
+            'User: ' + (lock.username || 'admin') + '\n' +
+            'Since: ' + (when ? new Date(when).toLocaleString('en-IN') : 'active session') + '\n\n' +
+            'Only one admin device is allowed to avoid Google Sheet sync conflicts.\n\n' +
+            'Click OK to FORCE login (other device will be logged out), or Cancel to stay out.';
+          const force = confirm(msg);
+          if (!force) {
+            App.toast('Admin login blocked — already active on another device', 'error');
+            DB.log('Admin login blocked', 'Device ' + deviceId + ' blocked; lock held by ' + lock.device_id);
+            return;
+          }
+          DB.log('Admin force login', 'Device ' + deviceId + ' took over from ' + lock.device_id);
+        }
+
+        DB.update(d => {
+          d.admin_lock = {
+            device_id: deviceId,
+            username: user.username,
+            locked_at: new Date().toISOString(),
+            last_seen: new Date().toISOString()
+          };
+        });
+      }
+
+      App.setSession({
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        name: user.name,
+        faculty_id: user.faculty_id,
+        device_id: DB.getDeviceId()
+      });
+      DB.log('Login', user.username + ' (' + user.role + ') device=' + DB.getDeviceId());
+      App.toast('Login successful', 'success');
+
+      setTimeout(function () {
+        if (user.role === 'admin') window.location.href = 'admin.html';
+        else if (user.role === 'faculty') window.location.href = 'faculty.html';
+        else window.location.href = 'index.html';
+      }, 300);
+    } catch (err) {
+      console.error(err);
+      App.toast('Login failed: ' + (err.message || err), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
     }
-    const users = DB.get().users || [];
-    const user = users.find(u =>
-      String(u.username).toLowerCase() === username &&
-      u.password === DB.hash(password)
-    );
-
-    if (!user) {
-      App.toast('Invalid username or password', 'error');
-      return;
-    }
-
-    App.setSession({
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      name: user.name,
-      faculty_id: user.faculty_id
-    });
-    DB.log('Login', user.username + ' (' + user.role + ')');
-    App.toast('Login successful', 'success');
-
-    setTimeout(function () {
-      if (user.role === 'admin') window.location.href = 'admin.html';
-      else if (user.role === 'faculty') window.location.href = 'faculty.html';
-      else window.location.href = 'index.html';
-    }, 300);
   }
 
   if (DB.initPromise) {
@@ -2300,13 +2361,77 @@ function runStudentImport() {
 async function loadFromGoogleSheet() {
   const status = document.getElementById('sheetLoadStatus');
   const tab = (document.getElementById('importSheetTab').value || 'Students').trim();
+  const csvUrl = (document.getElementById('importSheetCsvUrl') && document.getElementById('importSheetCsvUrl').value || '').trim();
+
+  function rowsToImportText(rows) {
+    const type = document.getElementById('importType').value || 'students';
+    const cfg = IMPORT_CONFIG[type] || IMPORT_CONFIG.students;
+    const headers = cfg.headers.slice();
+    if (rows[0]) Object.keys(rows[0]).forEach(function (k) { if (headers.indexOf(k) < 0) headers.push(k); });
+    const lines = [headers.join(',')];
+    rows.forEach(function (r) {
+      lines.push(headers.map(function (h) {
+        var v = r[h] != null ? String(r[h]) : '';
+        if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0) {
+          v = '"' + v.replace(/"/g, '""') + '"';
+        }
+        return v;
+      }).join(','));
+    });
+    document.getElementById('importText').value = lines.join('\n');
+    document.getElementById('importPreview').textContent = rows.length + ' rows loaded. Click Import to save.';
+    if (status) status.textContent = 'Loaded ' + rows.length + ' rows.';
+    App.toast(rows.length + ' rows loaded', 'success');
+  }
+
+  // Path A: public CSV URL (works without Apps Script importStudents)
+  if (csvUrl) {
+    if (status) status.textContent = 'Loading CSV link…';
+    try {
+      var fetchUrl = csvUrl;
+      // normalize common share links to export csv if possible
+      var idMatch = csvUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (idMatch && csvUrl.indexOf('export?') < 0 && csvUrl.indexOf('gviz') < 0) {
+        fetchUrl = 'https://docs.google.com/spreadsheets/d/' + idMatch[1] + '/export?format=csv&gid=0';
+      }
+      const res = await fetch(fetchUrl, { method: 'GET', redirect: 'follow' });
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' — make the sheet public (Anyone with link can view)');
+      const textCsv = await res.text();
+      if (!textCsv || textCsv.trim().charAt(0) === '<') {
+        throw new Error('Did not receive CSV. Publish sheet or use File → Share → Anyone with the link');
+      }
+      document.getElementById('importText').value = textCsv;
+      const lines = textCsv.split(/\r?\n/).filter(function (l) { return l.trim(); });
+      document.getElementById('importPreview').textContent = Math.max(0, lines.length - 1) + ' rows from CSV link. Click Import to save.';
+      if (status) status.textContent = 'CSV link loaded.';
+      App.toast('Sheet CSV loaded', 'success');
+      return;
+    } catch (err) {
+      console.error(err);
+      if (status) status.textContent = 'CSV link error: ' + (err.message || err);
+      App.toast('CSV link failed: ' + (err.message || err), 'error');
+      return;
+    }
+  }
+
   if (!DB.useGoogle()) {
-    App.toast('Set Google Script URL in js/db.js first', 'error');
-    if (status) status.textContent = 'Google Script URL not configured.';
+    App.toast('Set Google Script URL, or paste a public Sheet CSV link above', 'error');
+    if (status) status.textContent = 'No Script URL and no CSV link.';
     return;
   }
-  if (status) status.textContent = 'Loading from Google Sheet…';
+
+  if (status) status.textContent = 'Loading via Apps Script…';
   try {
+    // Ping first
+    try {
+      const pingUrl = DB.GOOGLE_SCRIPT_URL + (DB.GOOGLE_SCRIPT_URL.indexOf('?') >= 0 ? '&' : '?') + 'action=ping';
+      const pingRes = await fetch(pingUrl, { method: 'GET', redirect: 'follow' });
+      const pingJson = await pingRes.json();
+      if (pingJson && pingJson.version && pingJson.version < 3) {
+        // continue anyway
+      }
+    } catch (e) { /* ignore ping errors */ }
+
     let json = null;
     try {
       const res = await fetch(DB.GOOGLE_SCRIPT_URL, {
@@ -2328,37 +2453,21 @@ async function loadFromGoogleSheet() {
 
     if (!json || !json.success) {
       const msg = (json && json.message) || 'Load failed';
-      if (String(msg).toLowerCase().includes('unknown action')) {
-        throw new Error('Apps Script not updated. Paste latest google-apps-script.js → Deploy → New version');
+      if (/unknown action/i.test(String(msg))) {
+        throw new Error(
+          'Apps Script old version. Fix: Apps Script → paste google-apps-script.js → Deploy → Manage deployments → New version → Deploy. Or use public CSV link field above.'
+        );
       }
       throw new Error(msg);
     }
 
     const rows = json.rows || [];
     if (!rows.length) {
-      if (status) status.textContent = 'Tab "' + tab + '" has no data rows.';
-      App.toast('No rows found in sheet tab "' + tab + '"', 'warning');
+      if (status) status.textContent = 'Tab "' + tab + '" empty — add header + data rows.';
+      App.toast('No rows in tab "' + tab + '"', 'warning');
       return;
     }
-
-    const type = document.getElementById('importType').value || 'students';
-    const cfg = IMPORT_CONFIG[type] || IMPORT_CONFIG.students;
-    const headers = cfg.headers.slice();
-    Object.keys(rows[0]).forEach(function (k) { if (headers.indexOf(k) < 0) headers.push(k); });
-    const lines = [headers.join(',')];
-    rows.forEach(function (r) {
-      lines.push(headers.map(function (h) {
-        var v = r[h] != null ? String(r[h]) : '';
-        if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0) {
-          v = '"' + v.replace(/"/g, '""') + '"';
-        }
-        return v;
-      }).join(','));
-    });
-    document.getElementById('importText').value = lines.join('\n');
-    document.getElementById('importPreview').textContent = rows.length + ' rows loaded from tab "' + tab + '". Click Import to save.';
-    if (status) status.textContent = 'Loaded ' + rows.length + ' rows from "' + tab + '".';
-    App.toast(rows.length + ' rows loaded from Google Sheet', 'success');
+    rowsToImportText(rows);
   } catch (err) {
     console.error(err);
     if (status) status.textContent = 'Error: ' + (err.message || err);
@@ -2368,3 +2477,45 @@ async function loadFromGoogleSheet() {
 
 
 
+
+
+/* ========== ADMIN SINGLE-DEVICE LOCK ========== */
+async function startAdminLockWatch() {
+  const session = App.getSession();
+  if (!session || session.role !== 'admin') return;
+
+  async function beat() {
+    try {
+      await DB.refreshFromRemote();
+      const data = DB.get();
+      const lock = data.admin_lock;
+      const deviceId = DB.getDeviceId();
+
+      // Another device took over
+      if (lock && lock.device_id && lock.device_id !== deviceId && DB.isAdminLockActive(lock)) {
+        alert('Admin session ended.\\n\\nAnother device has logged in as admin.\\nThis window will return to the home page to protect Google Sheet data.');
+        DB.update(d => { d.session = null; });
+        try { sessionStorage.removeItem('cems_session'); } catch (e) {}
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Renew our lock
+      DB.update(d => {
+        d.admin_lock = {
+          device_id: deviceId,
+          username: session.username || 'admin',
+          locked_at: (lock && lock.device_id === deviceId && lock.locked_at) ? lock.locked_at : new Date().toISOString(),
+          last_seen: new Date().toISOString()
+        };
+      });
+    } catch (e) {
+      console.warn('admin lock beat failed', e);
+    }
+  }
+
+  // Immediate check + renew
+  await beat();
+  // Every 60s
+  setInterval(beat, 60000);
+}

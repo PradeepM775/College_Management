@@ -547,17 +547,16 @@
             <p class="text-muted mb-2" style="font-size:0.8rem;margin:0 0 0.75rem;" id="importSheetHelp">
               Create a tab in your CEMS spreadsheet with the correct columns (see format below).
             </p>
-            <div class="form-grid">
-              <div class="form-group" style="margin-bottom:0.75rem;">
-                <label class="form-label">Sheet tab name</label>
-                <input type="text" class="form-control" id="importSheetTab" value="Students" placeholder="Students">
-              </div>
-              <div class="form-group" style="margin-bottom:0.75rem;">
-                <label class="form-label">&nbsp;</label>
-                <button type="button" class="btn btn-primary btn-block" onclick="loadFromGoogleSheet()">Load from Google Sheet</button>
-              </div>
+            <div class="form-group" style="margin-bottom:0.75rem;">
+              <label class="form-label">Sheet tab name (Apps Script)</label>
+              <input type="text" class="form-control" id="importSheetTab" value="Students" placeholder="Students">
             </div>
-            <p id="sheetLoadStatus" class="text-muted" style="font-size:0.8rem;margin:0;"></p>
+            <div class="form-group" style="margin-bottom:0.75rem;">
+              <label class="form-label">Or public Google Sheet CSV link (no script update needed)</label>
+              <input type="text" class="form-control" id="importSheetCsvUrl" placeholder="https://docs.google.com/spreadsheets/d/..../export?format=csv&gid=0">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="loadFromGoogleSheet()">Load from Google Sheet</button>
+            <p id="sheetLoadStatus" class="text-muted" style="font-size:0.8rem;margin:0.5rem 0 0;"></p>
           </div>
         </div>
 
@@ -601,6 +600,7 @@
         document.getElementById('adminName').textContent = session.name || session.username;
         loadAdminDashboard();
         updateSyncStatus();
+        if (typeof startAdminLockWatch === 'function') startAdminLockWatch();
       }
     });
     document.getElementById('menuToggle').addEventListener('click', function () {

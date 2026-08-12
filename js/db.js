@@ -11,7 +11,7 @@ const DB = {
    * Example: 'https://script.google.com/macros/s/XXXX/exec'
    * Leave empty '' to use localStorage only.
    */
-  GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyH0iCPNUk0tBFX1kxffTJP7TZ7sKppK0eeyVdCyo1t_9dq-uf1vNqhgx_gzQ-RPHi4/exec',
+  GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwvFtDzsLWUDSAZREE7XPtK0PvVublTCIqiCfNnHuX05_8FCQ96Z-oR7eC5FJWqe2xE/exec',
 
   syncState: 'idle',
   lastError: null,
@@ -39,6 +39,7 @@ const DB = {
         default_seating_strategy: 'alternate'
       },
       session: null,
+      admin_lock: null,
       seeded: false
     };
   },
@@ -115,6 +116,44 @@ const DB = {
       console.warn('Google Sheets save failed', err);
       return false;
     }
+  },
+
+
+
+  LOCK_MS: 12 * 60 * 1000, // 12 minutes without heartbeat = expired
+
+  getDeviceId() {
+    try {
+      var id = localStorage.getItem('cems_device_id');
+      if (!id) {
+        id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('cems_device_id', id);
+      }
+      return id;
+    } catch (e) {
+      return 'dev_unknown';
+    }
+  },
+
+  isAdminLockActive(lock) {
+    if (!lock || !lock.device_id) return false;
+    var t = Date.parse(lock.last_seen || lock.locked_at || 0);
+    if (!t) return false;
+    return (Date.now() - t) < this.LOCK_MS;
+  },
+
+  async refreshFromRemote() {
+    if (!this.useGoogle()) return this.get();
+    var remote = await this.fetchFromGoogle();
+    if (remote && remote.seeded) {
+      var local = this.loadLocal();
+      remote.session = (this._cache && this._cache.session) || local.session || null;
+      if (!remote.history) remote.history = local.history || [];
+      this._cache = remote;
+      this.saveLocal(remote);
+      return remote;
+    }
+    return this.get();
   },
 
   get() {
