@@ -333,27 +333,53 @@ const DB = {
   },
 
   async init() {
-    let data = null;
-    if (this.useGoogle()) {
-      data = await this.fetchFromGoogle();
-    }
-    if (data && data.seeded) {
-      const local = this.loadLocal();
-      data.session = local.session || null;
-      this._cache = data;
-      this.saveLocal(data);
-      return data;
-    }
-    data = this.loadLocal();
+    // 1) Instant: local cache / seed (no network wait)
+    let data = this.loadLocal();
     if (!data.seeded) {
       data = this.buildSeed();
       this.saveLocal(data);
-      if (this.useGoogle()) {
-        await this.pushToGoogle(data);
-      }
     }
     this._cache = data;
+
+    // 2) Background: pull Google Sheet and refresh cache (non-blocking for UI)
+    if (this.useGoogle()) {
+      this._backgroundSync();
+    }
     return data;
+  },
+
+  async _backgroundSync() {
+    try {
+      const remote = await this.fetchFromGoogle();
+      if (remote && remote.seeded) {
+        const local = this.loadLocal();
+        remote.session = (this._cache && this._cache.session) || local.session || null;
+        this._cache = remote;
+        this.saveLocal(remote);
+        // Notify pages that data refreshed
+        try {
+          window.dispatchEvent(new CustomEvent('cems-data-synced', { detail: remote }));
+        } catch (e) {}
+      } else if (this._cache && this._cache.seeded) {
+        // Sheet empty — push local seed once
+        await this.pushToGoogle(this._cache);
+      }
+    } catch (e) {
+      console.warn('Background sheet sync failed', e);
+    }
+  },
+
+  /** Force refresh from Google (pull) */
+  async syncNow() {
+    if (!this.useGoogle()) return this.get();
+    const remote = await this.fetchFromGoogle();
+    if (remote && remote.seeded) {
+      remote.session = (this._cache && this._cache.session) || null;
+      this._cache = remote;
+      this.saveLocal(remote);
+      return remote;
+    }
+    return this.get();
   }
 };
 

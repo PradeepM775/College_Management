@@ -363,7 +363,8 @@ tbody tr:hover td { background: rgba(37, 99, 235, 0.03); }
   justify-content: space-between;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
+  overflow: visible;
 }
 .navbar-brand {
   display: flex;
@@ -1024,44 +1025,157 @@ tbody tr:hover td { background: rgba(37, 99, 235, 0.03); }
   .sidebar.open { transform: translateX(0); }
   .main-content { margin-left: 0; }
   .menu-toggle { display: block; }
-  .hero-inner { grid-template-columns: 1fr; }
-  .hero-preview { order: -1; }
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+  /* Content first on tablet/mobile, preview below */
+  .hero-content { order: 1; }
+  .hero-preview { order: 2; }
   .access-cards { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
   .hamburger { display: block; }
-  .navbar { padding: 0 1rem; }
+  .navbar {
+    padding: 0 1rem;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .navbar-brand .brand-name { font-size: 1.1rem; }
+  .navbar-brand .brand-sub { font-size: 0.6rem; }
   .navbar-nav {
-    position: fixed;
-    top: 72px;
+    display: none;
+    position: absolute;
+    top: 100%;
     left: 0;
     right: 0;
     background: var(--bg-card);
     border-bottom: 1px solid var(--border);
     flex-direction: column;
-    padding: 0.75rem;
+    align-items: stretch;
+    padding: 0.5rem 0.75rem 0.75rem;
     gap: 0;
-    transform: translateY(-120%);
-    transition: transform 0.25s ease;
     box-shadow: var(--shadow-md);
+    z-index: 201;
+    max-height: min(70vh, 420px);
+    overflow-y: auto;
   }
-  .navbar-nav.open { transform: translateY(0); }
-  .navbar-nav a {
+  .navbar-nav.open {
+    display: flex;
+  }
+  .navbar-nav li {
     width: 100%;
-    text-align: center;
-    padding: 12px;
+    list-style: none;
+  }
+  .navbar-nav a {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+  }
+  .navbar-nav a.active {
+    background: var(--blue-soft);
+    color: var(--blue);
   }
   .navbar-nav a.active::after { display: none; }
+  .navbar-nav .btn {
+    margin: 8px 0 4px;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+  }
+
+  .hero {
+    padding: 1.75rem 1rem 1.5rem;
+  }
+  .hero-content h1 {
+    font-size: 1.65rem;
+    line-height: 1.2;
+  }
+  .hero-content p {
+    font-size: 0.95rem;
+    margin-bottom: 1.25rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+  }
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .hero-preview {
+    padding: 1rem;
+  }
+  .preview-row {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  .preview-card {
+    padding: 0.65rem;
+  }
+  .preview-card .pc-value {
+    font-size: 1.05rem;
+  }
+  .preview-table th,
+  .preview-table td {
+    padding: 6px 6px;
+    font-size: 0.7rem;
+  }
+
+  .section, .access-section {
+    padding: 1.5rem 1rem;
+  }
+  .section-header h2 {
+    font-size: 1.25rem;
+  }
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filters-bar .form-control {
+    width: 100%;
+    min-width: 0;
+  }
+  .filters-bar .btn {
+    width: 100%;
+  }
+
   .result-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
-  .section, .access-section { padding: 2rem 1rem; }
-  .hero { padding: 2.5rem 1rem; }
   .page-content { padding: 1rem; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .page-header h2 { font-size: 1.2rem; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .stat-card { padding: 1rem; }
+  .stat-card .stat-value { font-size: 1.4rem; }
+
+  .topbar {
+    padding: 0 0.85rem;
+    height: 56px;
+  }
+  .card-body { padding: 1rem; }
+  .card-header { padding: 0.85rem 1rem; }
+  th, td { padding: 10px 12px; font-size: 0.8rem; }
+
+  .modal { max-width: 100%; margin: 0.5rem; }
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+  }
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
 }
 
 @media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .desk-cell { width: 56px; height: 54px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .desk-cell { width: 52px; height: 50px; font-size: 0.65rem; }
+  .hero-content h1 { font-size: 1.45rem; }
+  .preview-row { flex-wrap: nowrap; }
+  .preview-card .pc-label { font-size: 0.58rem; }
 }
