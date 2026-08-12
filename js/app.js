@@ -138,6 +138,7 @@ function handleLogin(e) {
       name: user.name,
       faculty_id: user.faculty_id
     });
+    DB.log('Login', user.username + ' (' + user.role + ')');
     App.toast('Login successful', 'success');
 
     setTimeout(function () {
@@ -159,6 +160,15 @@ function loadHomeTimetable() {
   const tbody = document.getElementById('timetableBody');
   if (!tbody) return;
   const data = DB.get();
+  const deptSel = document.getElementById('ttDept');
+  if (deptSel && deptSel.options.length <= 1) {
+    data.departments.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      deptSel.appendChild(opt);
+    });
+  }
   const exams = data.exams.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing');
 
   if (!exams.length) {
@@ -177,12 +187,69 @@ function loadHomeTimetable() {
     return `<tr>
       <td><strong>${App.subjectName(e.subject_id)}</strong><br><small class="text-muted">${App.subjectCode(e.subject_id)}</small></td>
       <td>${App.formatDate(e.date)}</td>
-      <td>${e.day}</td>
-      <td>${e.start_time} – ${e.end_time}</td>
+      <td>${e.day || ''}</td>
+      <td>${e.start_time}</td>
+      <td>${e.end_time}</td>
       <td>${classNames || '—'}</td>
       <td>${depts || '—'}</td>
       <td>${e.exam_type}</td>
-      <td><span class="badge badge-info">${e.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+
+function filterTimetable() {
+  const tbody = document.getElementById('timetableBody');
+  if (!tbody) return;
+  const data = DB.get();
+  const q = (document.getElementById('ttSearch')?.value || '').trim().toLowerCase();
+  const dept = document.getElementById('ttDept')?.value || '';
+  const date = document.getElementById('ttDate')?.value || '';
+
+  let exams = data.exams.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing');
+
+  if (q) {
+    exams = exams.filter(e => {
+      const sub = (App.subjectName(e.subject_id) + ' ' + App.subjectCode(e.subject_id) + ' ' + e.name).toLowerCase();
+      return sub.includes(q);
+    });
+  }
+  if (date) {
+    exams = exams.filter(e => e.date === date);
+  }
+  if (dept) {
+    const deptId = parseInt(dept);
+    exams = exams.filter(e => {
+      const parts = data.participants.filter(p => p.exam_id === e.id);
+      return parts.some(p => {
+        const c = data.classes.find(x => x.id === p.class_id);
+        return c && c.department_id === deptId;
+      });
+    });
+  }
+
+  if (!exams.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No matching examinations</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = exams.map(e => {
+    const parts = data.participants.filter(p => p.exam_id === e.id);
+    const classNames = parts.map(p => App.className(p.class_id)).join(', ');
+    const deptIds = [...new Set(parts.map(p => {
+      const c = data.classes.find(x => x.id === p.class_id);
+      return c ? c.department_id : null;
+    }).filter(Boolean))];
+    const depts = deptIds.map(id => App.deptName(id)).join(', ');
+    return `<tr>
+      <td><strong>${App.subjectName(e.subject_id)}</strong><br><small class="text-muted">${App.subjectCode(e.subject_id)}</small></td>
+      <td>${App.formatDate(e.date)}</td>
+      <td>${e.day || ''}</td>
+      <td>${e.start_time}</td>
+      <td>${e.end_time}</td>
+      <td>${classNames || '—'}</td>
+      <td>${depts || '—'}</td>
+      <td>${e.exam_type}</td>
     </tr>`;
   }).join('');
 }
@@ -291,29 +358,92 @@ function loadAdminDashboard() {
   const data = DB.get();
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
-  set('statStudents', data.students.filter(s => s.status === 'Active').length);
+  const activeStudents = data.students.filter(s => s.status === 'Active').length;
+  const upcoming = data.exams.filter(e => e.status === 'Upcoming').length;
+
+  set('statStudents', activeStudents);
   set('statFaculty', data.faculty.filter(f => f.status === 'Active').length);
   set('statClasses', data.classes.length);
   set('statDepts', data.departments.length);
   set('statHalls', data.halls.length);
   set('statExams', data.exams.length);
   set('statDesks', data.desks.length);
-  const today = new Date().toISOString().slice(0, 10);
-  set('statToday', data.exams.filter(e => e.date === today).length);
   set('statSeatings', data.seatings.length);
+  set('statSubjects', data.subjects.length);
+  set('statDuties', data.duties.length);
 
+  const footS = document.getElementById('statStudentsFoot');
+  if (footS) footS.textContent = activeStudents + ' active · ' + data.students.length + ' total';
+  const footE = document.getElementById('statExamsFoot');
+  if (footE) footE.textContent = upcoming + ' upcoming';
+
+  const college = document.getElementById('dashCollegeName');
+  if (college) college.textContent = (data.settings && data.settings.college_name) || 'College Exam Management System';
+  const dateEl = document.getElementById('dashDate');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const syncEl = document.getElementById('dashSync');
+  if (syncEl) {
+    syncEl.textContent = DB.useGoogle()
+      ? (DB.syncState === 'online' ? 'Google Sheet connected' : 'Sheet: ' + (DB.syncState || 'syncing'))
+      : 'Local storage';
+  }
+
+  // Dept chart
   const chartEl = document.getElementById('deptChart');
   if (chartEl) {
-    const max = Math.max(...data.departments.map(d => data.students.filter(s => s.department_id === d.id && s.status === 'Active').length), 1);
-    chartEl.innerHTML = '<div class="bar-chart">' + data.departments.map(d => {
-      const count = data.students.filter(s => s.department_id === d.id && s.status === 'Active').length;
-      return `<div class="bar-row">
-        <div class="bar-label"><span>${d.name}</span><span>${count}</span></div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(count / max * 100)}%;"></div></div>
-      </div>`;
-    }).join('') + '</div>';
+    const max = Math.max(1, ...data.departments.map(d =>
+      data.students.filter(s => s.department_id === d.id && s.status === 'Active').length
+    ));
+    if (!data.departments.length) {
+      chartEl.innerHTML = '<div class="empty-state" style="padding:1.5rem;"><p>No departments yet</p></div>';
+    } else {
+      chartEl.innerHTML = '<div class="bar-chart">' + data.departments.map(d => {
+        const count = data.students.filter(s => s.department_id === d.id && s.status === 'Active').length;
+        return `<div class="bar-row">
+          <div class="bar-label"><span>${d.name}</span><span>${count}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count / max * 100)}%;"></div></div>
+        </div>`;
+      }).join('') + '</div>';
+    }
+  }
+
+  // Upcoming exams table
+  const examBody = document.getElementById('dashExamBody');
+  if (examBody) {
+    const exams = data.exams
+      .filter(e => e.status === 'Upcoming' || e.status === 'Ongoing')
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      .slice(0, 6);
+    examBody.innerHTML = exams.length ? exams.map(e => `<tr>
+      <td><strong>${App.subjectName(e.subject_id)}</strong><br><small class="text-muted">${e.name}</small></td>
+      <td>${App.formatDate(e.date)}</td>
+      <td>${e.start_time}</td>
+      <td><span class="badge badge-info">${e.status}</span></td>
+    </tr>`).join('') : '<tr><td colspan="4" class="text-center text-muted">No upcoming examinations</td></tr>';
+  }
+
+  // Hall utilization
+  const hallEl = document.getElementById('hallUtilChart');
+  if (hallEl) {
+    if (!data.halls.length) {
+      hallEl.innerHTML = '<div class="empty-state" style="padding:1.5rem;"><p>No halls configured</p></div>';
+    } else {
+      const maxC = Math.max(1, ...data.halls.map(h => h.capacity || 0));
+      hallEl.innerHTML = '<div class="bar-chart">' + data.halls.map(h => {
+        const allocated = data.seatings.filter(s => s.hall_id === h.id).length;
+        // unique desks used across exams is approximate; show capacity bar
+        const pct = Math.round(((h.capacity || 0) / maxC) * 100);
+        return `<div class="bar-row">
+          <div class="bar-label"><span>${h.hall_number}</span><span>${h.capacity} desks</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
+        </div>`;
+      }).join('') + '</div>';
+    }
   }
 }
+
 
 /* ========== STUDENTS ========== */
 function loadStudentsPanel() {
@@ -326,16 +456,17 @@ function loadStudentsPanel() {
   if (search) {
     list = list.filter(s =>
       s.name.toLowerCase().includes(search) ||
-      s.register_number.includes(search)
+      String(s.register_number).includes(search)
     );
   }
 
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No students found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No students found</td></tr>';
     return;
   }
 
   tbody.innerHTML = list.map(s => `<tr>
+    <td><input type="checkbox" class="row-check stu-check" value="${s.id}"></td>
     <td><strong>${s.register_number}</strong></td>
     <td>${s.name}</td>
     <td>${s.gender}</td>
@@ -348,6 +479,8 @@ function loadStudentsPanel() {
       <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})">Delete</button>
     </td>
   </tr>`).join('');
+  const sa = document.getElementById('stuSelectAll');
+  if (sa) sa.checked = false;
 }
 
 function openAddStudent() {
@@ -434,6 +567,7 @@ function saveStudent() {
   if (!ok) return;
   App.closeModal('studentModal');
   App.toast(id ? 'Student updated' : 'Student added', 'success');
+  DB.log(id ? 'Update student' : 'Add student', document.getElementById('stuReg').value + ' — ' + document.getElementById('stuName').value);
   loadStudentsPanel();
   loadAdminDashboard();
 }
@@ -456,6 +590,7 @@ function loadFacultyPanel() {
   if (!tbody) return;
   const data = DB.get();
   tbody.innerHTML = data.faculty.map(f => `<tr>
+    <td><input type="checkbox" class="row-check fac-check" value="${f.id}"></td>
     <td><strong>${f.faculty_id}</strong></td>
     <td>${f.name}</td>
     <td>${App.deptName(f.department_id)}</td>
@@ -467,7 +602,9 @@ function loadFacultyPanel() {
       <button class="btn btn-sm btn-secondary" onclick="editFaculty(${f.id})">Edit</button>
       <button class="btn btn-sm btn-danger" onclick="deleteFaculty(${f.id})">Delete</button>
     </td>
-  </tr>`).join('') || '<tr><td colspan="8" class="text-center text-muted">No faculty</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9" class="text-center text-muted">No faculty</td></tr>';
+  const fa = document.getElementById('facSelectAll');
+  if (fa) fa.checked = false;
 }
 
 function openAddFaculty() {
@@ -570,6 +707,7 @@ function saveFaculty() {
   if (!ok) return;
   App.closeModal('facultyModal');
   App.toast(id ? 'Faculty updated' : 'Faculty added', 'success');
+  DB.log(id ? 'Update faculty' : 'Add faculty', document.getElementById('facCode').value + ' — ' + document.getElementById('facName').value);
   loadFacultyPanel();
   loadAdminDashboard();
 }
@@ -590,22 +728,6 @@ function deleteFaculty(id) {
 }
 
 /* ========== HALLS CRUD ========== */
-function loadHallsPanel() {
-  const tbody = document.getElementById('hallsBody');
-  if (!tbody) return;
-  const data = DB.get();
-  tbody.innerHTML = data.halls.map(h => `<tr>
-    <td><strong>${h.hall_number}</strong></td>
-    <td>${h.building}</td>
-    <td>${h.floor}</td>
-    <td>${h.rows} × ${h.columns}</td>
-    <td>${h.capacity}</td>
-    <td><span class="badge badge-success">${h.status}</span></td>
-    <td>
-      <button class="btn btn-sm btn-danger" onclick="deleteHall(${h.id})">Remove</button>
-    </td>
-  </tr>`).join('') || '<tr><td colspan="7" class="text-center text-muted">No halls</td></tr>';
-}
 
 function openAddHall() {
   document.getElementById('hallModalTitle').textContent = 'Add Exam Hall';
@@ -620,58 +742,6 @@ function openAddHall() {
   App.openModal('hallModal');
 }
 
-function saveHall() {
-  const num = document.getElementById('hallNum').value.trim();
-  const building = document.getElementById('hallBuilding').value.trim();
-  const floor = document.getElementById('hallFloor').value.trim();
-  const rows = parseInt(document.getElementById('hallRows').value);
-  const cols = parseInt(document.getElementById('hallCols').value);
-  if (!num || !building || !floor || !rows || !cols) {
-    App.toast('Please fill all required fields', 'warning');
-    return;
-  }
-
-  let ok = true;
-  DB.update(data => {
-    if (data.halls.some(h => h.hall_number.toLowerCase() === num.toLowerCase())) {
-      App.toast('Hall number already exists', 'error');
-      ok = false;
-      return;
-    }
-    const hid = DB.nextId(data.halls);
-    const capacity = rows * cols;
-    data.halls.push({
-      id: hid,
-      hall_number: num,
-      building,
-      block: document.getElementById('hallBlock').value.trim(),
-      floor,
-      room_number: num.replace(/[^0-9]/g, '') || num,
-      total_desks: capacity,
-      rows, columns: cols, capacity,
-      status: 'Available'
-    });
-    let maxDeskId = data.desks.length ? Math.max(...data.desks.map(d => d.id)) : 0;
-    let dn = 1;
-    for (let r = 1; r <= rows; r++) {
-      for (let c = 1; c <= cols; c++) {
-        data.desks.push({
-          id: ++maxDeskId,
-          hall_id: hid,
-          desk_number: dn++,
-          row: r,
-          column: c,
-          status: 'Available'
-        });
-      }
-    }
-  });
-  if (!ok) return;
-  App.closeModal('hallModal');
-  App.toast('Hall added with ' + (rows * cols) + ' desks', 'success');
-  loadHallsPanel();
-  loadAdminDashboard();
-}
 
 function deleteHall(id) {
   const data = DB.get();
@@ -699,6 +769,7 @@ function loadExamsPanel() {
   if (!tbody) return;
   const data = DB.get();
   tbody.innerHTML = data.exams.map(e => `<tr>
+    <td><input type="checkbox" class="row-check exam-check" value="${e.id}"></td>
     <td><strong>${e.exam_id}</strong></td>
     <td>${e.name}</td>
     <td>${App.subjectName(e.subject_id)}</td>
@@ -710,7 +781,9 @@ function loadExamsPanel() {
       <button class="btn btn-sm btn-secondary" onclick="editExam(${e.id})">Edit</button>
       <button class="btn btn-sm btn-danger" onclick="deleteExam(${e.id})">Delete</button>
     </td>
-  </tr>`).join('') || '<tr><td colspan="8" class="text-center text-muted">No exams</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="9" class="text-center text-muted">No exams</td></tr>';
+  const ea = document.getElementById('examSelectAll');
+  if (ea) ea.checked = false;
 }
 
 function populateExamForm() {
@@ -726,11 +799,15 @@ function populateExamForm() {
 }
 
 function openAddExam() {
-  document.getElementById('examModalTitle').textContent = 'Add Exam';
-  document.getElementById('examForm').reset();
+  document.getElementById('examModalTitle').textContent = 'Add Examination';
   document.getElementById('examId').value = '';
+  document.getElementById('examCode').value = '';
+  document.getElementById('examName').value = '';
+  document.getElementById('examDate').value = '';
   document.getElementById('examStart').value = '10:00';
   document.getElementById('examEnd').value = '13:00';
+  document.getElementById('examType').value = 'Semester Exam';
+  document.getElementById('examStatus').value = 'Upcoming';
   populateExamForm();
   App.openModal('examModal');
 }
@@ -759,21 +836,31 @@ function editExam(id) {
 }
 
 function saveExam() {
+  try {
   const id = document.getElementById('examId').value;
-  const code = document.getElementById('examCode').value.trim().toUpperCase();
+  let code = document.getElementById('examCode').value.trim().toUpperCase();
   const name = document.getElementById('examName').value.trim();
   const date = document.getElementById('examDate').value;
   const start = document.getElementById('examStart').value;
   const end = document.getElementById('examEnd').value;
+  const subjectEl = document.getElementById('examSubject');
   const classIds = [...document.querySelectorAll('.exam-class-check:checked')].map(c => parseInt(c.value));
 
-  if (!code || !name || !date || !start || !end) {
-    App.toast('Please fill all required fields', 'warning');
+  if (!name || !date || !start || !end) {
+    App.toast('Please fill Exam Name, Date and Time', 'warning');
+    return;
+  }
+  if (!subjectEl || !subjectEl.value) {
+    App.toast('Please select a subject (add subjects first if list is empty)', 'warning');
     return;
   }
   if (!classIds.length) {
     App.toast('Select at least one eligible class', 'warning');
     return;
+  }
+  if (!code) {
+    const data0 = DB.get();
+    code = 'EXAM' + String(DB.nextId(data0.exams)).padStart(3, '0');
   }
 
   const day = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
@@ -825,8 +912,13 @@ function saveExam() {
   if (!ok) return;
   App.closeModal('examModal');
   App.toast(id ? 'Exam updated' : 'Exam added', 'success');
+  DB.log(id ? 'Update exam' : 'Add exam', code + ' — ' + name);
   loadExamsPanel();
   loadAdminDashboard();
+  } catch (err) {
+    console.error(err);
+    App.toast('Could not save exam: ' + (err.message || err), 'error');
+  }
 }
 
 function deleteExam(id) {
@@ -923,9 +1015,10 @@ function generateSeating() {
 
   DB.update(d => {
     d.seatings = d.seatings.filter(s => s.exam_id !== examId);
+    let nextSid = DB.nextId(d.seatings);
     students.forEach((stu, i) => {
       d.seatings.push({
-        id: DB.nextId(d.seatings) + i,
+        id: nextSid++,
         exam_id: examId,
         student_id: stu.id,
         hall_id: allDesks[i].hall_id,
@@ -936,6 +1029,7 @@ function generateSeating() {
   });
 
   App.toast(`Seating generated for ${students.length} students`, 'success');
+  DB.log('Generate seating', students.length + ' students, exam #' + examId);
   viewSeating();
 }
 
@@ -1769,5 +1863,508 @@ function showPanel(name) {
   if (name === 'duties') loadDutiesPanel();
   if (name === 'attendance') loadAttendancePanel();
   if (name === 'reports') loadReportsPanel();
+  if (name === 'history') loadHistoryPanel();
   if (name === 'settings') loadSettingsPanel();
 }
+
+
+
+
+
+/* ========== BULK SELECT / DELETE ========== */
+function toggleSelectAll(prefix) {
+  const all = document.getElementById(prefix + 'SelectAll');
+  document.querySelectorAll('.' + prefix + '-check').forEach(cb => { cb.checked = !!(all && all.checked); });
+}
+
+function bulkDelete(type) {
+  const map = {
+    students: { cls: 'stu-check', label: 'students', reload: () => loadStudentsPanel() },
+    faculty: { cls: 'fac-check', label: 'faculty', reload: () => loadFacultyPanel() },
+    exams: { cls: 'exam-check', label: 'exams', reload: () => loadExamsPanel() }
+  };
+  const cfg = map[type];
+  if (!cfg) return;
+  const ids = [...document.querySelectorAll('.' + cfg.cls + ':checked')].map(c => parseInt(c.value)).filter(Boolean);
+  if (!ids.length) {
+    App.toast('Select at least one row', 'warning');
+    return;
+  }
+  if (!confirm('Delete ' + ids.length + ' selected ' + cfg.label + '?')) return;
+
+  DB.update(data => {
+    if (type === 'students') {
+      data.students = data.students.filter(s => !ids.includes(s.id));
+      data.seatings = data.seatings.filter(s => !ids.includes(s.student_id));
+      data.attendance = data.attendance.filter(a => !ids.includes(a.student_id));
+    } else if (type === 'faculty') {
+      data.faculty = data.faculty.filter(f => !ids.includes(f.id));
+      data.duties = data.duties.filter(d => !ids.includes(d.faculty_id));
+      data.users = data.users.filter(u => !(u.role === 'faculty' && ids.includes(u.faculty_id)));
+    } else if (type === 'exams') {
+      data.exams = data.exams.filter(e => !ids.includes(e.id));
+      data.participants = data.participants.filter(p => !ids.includes(p.exam_id));
+      data.seatings = data.seatings.filter(s => !ids.includes(s.exam_id));
+      data.duties = data.duties.filter(d => !ids.includes(d.exam_id));
+      data.attendance = data.attendance.filter(a => !ids.includes(a.exam_id));
+    }
+  });
+  DB.log('Bulk delete ' + type, ids.length + ' records deleted (ids: ' + ids.slice(0, 20).join(', ') + (ids.length > 20 ? '…' : '') + ')');
+  App.toast(ids.length + ' ' + cfg.label + ' deleted', 'success');
+  cfg.reload();
+  loadAdminDashboard();
+}
+
+/* ========== ACTIVITY HISTORY ========== */
+function loadHistoryPanel() {
+  const tbody = document.getElementById('historyBody');
+  if (!tbody) return;
+  const data = DB.get();
+  const q = (document.getElementById('histSearch')?.value || '').trim().toLowerCase();
+  let list = data.history || [];
+  if (q) {
+    list = list.filter(h =>
+      (h.action || '').toLowerCase().includes(q) ||
+      (h.details || '').toLowerCase().includes(q) ||
+      (h.user || '').toLowerCase().includes(q)
+    );
+  }
+  tbody.innerHTML = list.length ? list.map(h => {
+    const t = h.at ? new Date(h.at).toLocaleString('en-IN') : '';
+    return `<tr>
+      <td style="white-space:nowrap;">${t}</td>
+      <td>${h.user || '—'}</td>
+      <td>${h.role || '—'}</td>
+      <td><strong>${h.action || ''}</strong></td>
+      <td class="text-secondary">${h.details || ''}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="text-center text-muted">No activity recorded yet</td></tr>';
+}
+
+function clearHistory() {
+  if (!confirm('Clear all activity history?')) return;
+  DB.update(d => { d.history = []; });
+  DB.log('Clear history', 'Activity history cleared');
+  loadHistoryPanel();
+  App.toast('History cleared', 'success');
+}
+
+/* ========== GENERIC BULK IMPORT ========== */
+const IMPORT_CONFIG = {
+  students: {
+    title: 'Import Students',
+    tab: 'Students',
+    headers: ['register_number', 'name', 'gender', 'department_code', 'class_name', 'year', 'email', 'phone'],
+    sample: [
+      ['24050', 'Aarav Sharma', 'Male', 'BSC-CS', 'II B.Sc CS', '2', 'aarav@college.edu', '9876500010'],
+      ['24051', 'Aditi Patel', 'Female', 'BSC-CS', 'II B.Sc CS', '2', 'aditi@college.edu', '9876500011']
+    ],
+    help: 'Bulk import students (60+ per class supported).',
+    missing: true,
+    panel: 'students'
+  },
+  faculty: {
+    title: 'Import Faculty',
+    tab: 'Faculty',
+    headers: ['faculty_id', 'name', 'department_code', 'designation', 'email', 'phone', 'password'],
+    sample: [
+      ['FAC010', 'Dr. Meena Rao', 'BSC-CS', 'Professor', 'meena@college.edu', '9876500100', 'faculty123'],
+      ['FAC011', 'Prof. Arun Nair', 'BSC-MATH', 'Associate Professor', 'arun@college.edu', '9876500101', 'faculty123']
+    ],
+    help: 'Import faculty. Optional password column (default: faculty123). Creates login user automatically.',
+    missing: true,
+    panel: 'faculty'
+  },
+  departments: {
+    title: 'Import Departments',
+    tab: 'Departments',
+    headers: ['code', 'name', 'status'],
+    sample: [
+      ['BSC-CS', 'B.Sc Computer Science', 'Active'],
+      ['BSC-PHY', 'B.Sc Physics', 'Active']
+    ],
+    help: 'Import departments. Code must be unique.',
+    missing: false,
+    panel: 'departments'
+  },
+  classes: {
+    title: 'Import Classes',
+    tab: 'Classes',
+    headers: ['name', 'department_code', 'course', 'year', 'section', 'academic_year'],
+    sample: [
+      ['II B.Sc CS', 'BSC-CS', 'B.Sc Computer Science', '2', 'A', '2025-26'],
+      ['II B.Sc Physics', 'BSC-PHY', 'B.Sc Physics', '2', 'A', '2025-26']
+    ],
+    help: 'Import classes. department_code must match an existing department (or enable auto-create).',
+    missing: true,
+    panel: 'classes'
+  },
+  subjects: {
+    title: 'Import Subjects',
+    tab: 'Subjects',
+    headers: ['subject_code', 'name', 'department_code', 'semester', 'credits'],
+    sample: [
+      ['CS301', 'Operating Systems', 'BSC-CS', '5', '4'],
+      ['MA301', 'Real Analysis', 'BSC-MATH', '5', '4']
+    ],
+    help: 'Import subjects. subject_code must be unique.',
+    missing: true,
+    panel: 'subjects'
+  }
+};
+
+function openImportData(type) {
+  const cfg = IMPORT_CONFIG[type];
+  if (!cfg) return;
+  document.getElementById('importType').value = type;
+  document.getElementById('importModalTitle').textContent = cfg.title;
+  document.getElementById('importHelp').textContent = cfg.help;
+  document.getElementById('importSheetTab').value = cfg.tab;
+  document.getElementById('importFormat').textContent = cfg.headers.join(', ');
+  document.getElementById('importRunBtn').textContent = 'Import ' + cfg.title.replace('Import ', '');
+  document.getElementById('importText').value = '';
+  document.getElementById('importFile').value = '';
+  document.getElementById('importPreview').textContent = '';
+  document.getElementById('sheetLoadStatus').textContent = '';
+  const miss = document.getElementById('importMissingWrap');
+  if (miss) miss.style.display = cfg.missing ? '' : 'none';
+  App.openModal('importModal');
+}
+
+function openImportStudents() { openImportData('students'); }
+
+function downloadImportTemplate() {
+  const type = document.getElementById('importType').value || 'students';
+  const cfg = IMPORT_CONFIG[type];
+  const rows = [cfg.headers].concat(cfg.sample);
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = type + '_import_template.csv';
+  a.click();
+}
+
+function downloadStudentTemplate() { 
+  document.getElementById('importType').value = 'students';
+  downloadImportTemplate();
+}
+
+function handleImportFile(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (ev) {
+    document.getElementById('importText').value = ev.target.result || '';
+    const lines = (ev.target.result || '').split(/\r?\n/).filter(l => l.trim());
+    document.getElementById('importPreview').textContent =
+      lines.length ? Math.max(0, lines.length - 1) + ' data rows loaded from file' : 'File empty';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return { headers: [], rows: [] };
+
+  function splitLine(line) {
+    const out = [];
+    let cur = '';
+    let q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (q && line[i + 1] === '"') { cur += '"'; i++; }
+        else q = !q;
+      } else if (ch === ',' && !q) {
+        out.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur.trim());
+    return out;
+  }
+
+  let start = 0;
+  let headers = splitLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+  const hasHeader = headers.some(h =>
+    h.includes('register') || h === 'name' || h.includes('department') ||
+    h.includes('code') || h.includes('faculty') || h.includes('subject') || h === 'course'
+  );
+  if (!hasHeader) {
+    const type = document.getElementById('importType')?.value || 'students';
+    headers = (IMPORT_CONFIG[type] || IMPORT_CONFIG.students).headers.slice();
+    start = 0;
+  } else {
+    start = 1;
+  }
+
+  const rows = [];
+  for (let i = start; i < lines.length; i++) {
+    const cols = splitLine(lines[i]);
+    if (!cols.some(c => c)) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = cols[idx] !== undefined ? cols[idx] : ''; });
+    if (!obj.register_number && obj.reg_no) obj.register_number = obj.reg_no;
+    if (!obj.department_code && obj.department) obj.department_code = obj.department;
+    if (!obj.class_name && obj.class) obj.class_name = obj.class;
+    if (!obj.subject_code && obj.code && (document.getElementById('importType')?.value === 'subjects')) obj.subject_code = obj.code;
+    if (!obj.faculty_id && obj.id && (document.getElementById('importType')?.value === 'faculty')) obj.faculty_id = obj.id;
+    rows.push(obj);
+  }
+  return { headers, rows };
+}
+
+function findDept(data, codeOrName) {
+  const key = String(codeOrName || '').trim().toUpperCase();
+  if (!key) return null;
+  return data.departments.find(d =>
+    String(d.code).toUpperCase() === key || String(d.name).toUpperCase() === key
+  ) || null;
+}
+
+function ensureDept(data, code, name, create) {
+  let dept = findDept(data, code) || findDept(data, name);
+  if (dept) return dept;
+  if (!create) return null;
+  const c = String(code || name || 'DEPT').trim().toUpperCase().replace(/\s+/g, '-');
+  dept = { id: DB.nextId(data.departments), code: c, name: name || c, status: 'Active' };
+  data.departments.push(dept);
+  return dept;
+}
+
+function runDataImport() {
+  const type = document.getElementById('importType').value || 'students';
+  const text = (document.getElementById('importText').value || '').trim();
+  if (!text) { App.toast('Paste CSV text or choose a file', 'warning'); return; }
+  const parsed = parseCSV(text);
+  if (!parsed.rows.length) { App.toast('No data rows found', 'warning'); return; }
+  const missingMode = document.getElementById('importMissing')?.value || 'skip';
+  const create = missingMode === 'create';
+
+  let added = 0, updated = 0, skipped = 0;
+
+  if (type === 'students') {
+    DB.update(data => {
+      parsed.rows.forEach(row => {
+        const reg = String(row.register_number || '').trim();
+        const name = String(row.name || '').trim();
+        if (!reg || !name) { skipped++; return; }
+        const dept = ensureDept(data, row.department_code, row.department_code, create);
+        let cls = data.classes.find(c => c.name.toLowerCase() === String(row.class_name || '').trim().toLowerCase());
+        if (!cls && create && row.class_name) {
+          cls = {
+            id: DB.nextId(data.classes),
+            name: String(row.class_name).trim(),
+            department_id: dept ? dept.id : (data.departments[0]?.id || 1),
+            course: String(row.class_name).trim(),
+            year: parseInt(row.year) || 2,
+            section: 'A',
+            academic_year: data.settings?.academic_year || '2025-26'
+          };
+          data.classes.push(cls);
+        }
+        if (!dept || !cls) { skipped++; return; }
+        const payload = {
+          name,
+          gender: ['Male','Female','Other'].includes(row.gender) ? row.gender : 'Male',
+          department_id: dept.id,
+          class_id: cls.id,
+          course: cls.course || row.class_name,
+          year: parseInt(row.year) || cls.year || 2,
+          email: String(row.email || '').trim(),
+          phone: String(row.phone || '').trim(),
+          status: 'Active',
+          academic_year: data.settings?.academic_year || '2025-26'
+        };
+        const existing = data.students.find(s => String(s.register_number).toUpperCase() === reg.toUpperCase());
+        if (existing) { Object.assign(existing, payload); updated++; }
+        else {
+          data.students.push({ id: DB.nextId(data.students), student_id: 'STU' + reg, register_number: reg, ...payload });
+          added++;
+        }
+      });
+    });
+  } else if (type === 'faculty') {
+    DB.update(data => {
+      parsed.rows.forEach(row => {
+        const fid = String(row.faculty_id || '').trim().toUpperCase();
+        const name = String(row.name || '').trim();
+        if (!fid || !name) { skipped++; return; }
+        const dept = ensureDept(data, row.department_code, row.department_code, create);
+        if (!dept) { skipped++; return; }
+        const payload = {
+          name,
+          department_id: dept.id,
+          designation: String(row.designation || 'Assistant Professor').trim(),
+          email: String(row.email || '').trim(),
+          phone: String(row.phone || '').trim(),
+          status: 'Active'
+        };
+        const pw = String(row.password || 'faculty123').trim() || 'faculty123';
+        let existing = data.faculty.find(f => String(f.faculty_id).toUpperCase() === fid);
+        if (existing) {
+          Object.assign(existing, payload);
+          let user = data.users.find(u => String(u.username).toUpperCase() === fid);
+          if (user) { user.password = DB.hash(pw); user.name = name; }
+          else data.users.push({ id: DB.nextId(data.users), username: fid, password: DB.hash(pw), role: 'faculty', faculty_id: existing.id, name });
+          updated++;
+        } else {
+          const id = DB.nextId(data.faculty);
+          data.faculty.push({ id, faculty_id: fid, ...payload });
+          data.users.push({ id: DB.nextId(data.users), username: fid, password: DB.hash(pw), role: 'faculty', faculty_id: id, name });
+          added++;
+        }
+      });
+    });
+  } else if (type === 'departments') {
+    DB.update(data => {
+      parsed.rows.forEach(row => {
+        const code = String(row.code || row.department_code || '').trim().toUpperCase();
+        const name = String(row.name || '').trim();
+        if (!code || !name) { skipped++; return; }
+        const existing = data.departments.find(d => String(d.code).toUpperCase() === code);
+        if (existing) {
+          existing.name = name;
+          existing.status = row.status || existing.status || 'Active';
+          updated++;
+        } else {
+          data.departments.push({ id: DB.nextId(data.departments), code, name, status: row.status || 'Active' });
+          added++;
+        }
+      });
+    });
+  } else if (type === 'classes') {
+    DB.update(data => {
+      parsed.rows.forEach(row => {
+        const name = String(row.name || row.class_name || '').trim();
+        if (!name) { skipped++; return; }
+        const dept = ensureDept(data, row.department_code, row.department_code, create);
+        if (!dept) { skipped++; return; }
+        const payload = {
+          name,
+          department_id: dept.id,
+          course: String(row.course || name).trim(),
+          year: parseInt(row.year) || 2,
+          section: String(row.section || 'A').trim(),
+          academic_year: String(row.academic_year || data.settings?.academic_year || '2025-26').trim()
+        };
+        const existing = data.classes.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (existing) { Object.assign(existing, payload); updated++; }
+        else { data.classes.push({ id: DB.nextId(data.classes), ...payload }); added++; }
+      });
+    });
+  } else if (type === 'subjects') {
+    DB.update(data => {
+      parsed.rows.forEach(row => {
+        const code = String(row.subject_code || row.code || '').trim().toUpperCase();
+        const name = String(row.name || '').trim();
+        if (!code || !name) { skipped++; return; }
+        const dept = ensureDept(data, row.department_code, row.department_code, create);
+        if (!dept) { skipped++; return; }
+        const payload = {
+          subject_code: code,
+          name,
+          department_id: dept.id,
+          semester: parseInt(row.semester) || 1,
+          credits: parseInt(row.credits) || 4
+        };
+        const existing = data.subjects.find(s => String(s.subject_code).toUpperCase() === code);
+        if (existing) { Object.assign(existing, payload); updated++; }
+        else { data.subjects.push({ id: DB.nextId(data.subjects), ...payload }); added++; }
+      });
+    });
+  }
+
+  App.closeModal('importModal');
+  let msg = 'Import done: ' + added + ' added, ' + updated + ' updated';
+  if (skipped) msg += ', ' + skipped + ' skipped';
+  App.toast(msg, (!added && !updated) ? 'warning' : 'success');
+
+  const cfg = IMPORT_CONFIG[type];
+  if (cfg?.panel === 'students') loadStudentsPanel();
+  if (cfg?.panel === 'faculty') loadFacultyPanel();
+  if (cfg?.panel === 'departments') loadDeptPanel();
+  if (cfg?.panel === 'classes') loadClassPanel();
+  if (cfg?.panel === 'subjects') loadSubjectPanel();
+  loadAdminDashboard();
+}
+
+function runStudentImport() { 
+  document.getElementById('importType').value = 'students';
+  runDataImport();
+}
+
+async function loadFromGoogleSheet() {
+  const status = document.getElementById('sheetLoadStatus');
+  const tab = (document.getElementById('importSheetTab').value || 'Students').trim();
+  if (!DB.useGoogle()) {
+    App.toast('Set Google Script URL in js/db.js first', 'error');
+    if (status) status.textContent = 'Google Script URL not configured.';
+    return;
+  }
+  if (status) status.textContent = 'Loading from Google Sheet…';
+  try {
+    let json = null;
+    try {
+      const res = await fetch(DB.GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'importStudents', sheet: tab })
+      });
+      json = await res.json();
+    } catch (e1) { json = null; }
+
+    if (!json || json.success === false) {
+      const url = DB.GOOGLE_SCRIPT_URL +
+        (DB.GOOGLE_SCRIPT_URL.indexOf('?') >= 0 ? '&' : '?') +
+        'action=importStudents&sheet=' + encodeURIComponent(tab);
+      const res2 = await fetch(url, { method: 'GET', redirect: 'follow' });
+      json = await res2.json();
+    }
+
+    if (!json || !json.success) {
+      const msg = (json && json.message) || 'Load failed';
+      if (String(msg).toLowerCase().includes('unknown action')) {
+        throw new Error('Apps Script not updated. Paste latest google-apps-script.js → Deploy → New version');
+      }
+      throw new Error(msg);
+    }
+
+    const rows = json.rows || [];
+    if (!rows.length) {
+      if (status) status.textContent = 'Tab "' + tab + '" has no data rows.';
+      App.toast('No rows found in sheet tab "' + tab + '"', 'warning');
+      return;
+    }
+
+    const type = document.getElementById('importType').value || 'students';
+    const cfg = IMPORT_CONFIG[type] || IMPORT_CONFIG.students;
+    const headers = cfg.headers.slice();
+    Object.keys(rows[0]).forEach(function (k) { if (headers.indexOf(k) < 0) headers.push(k); });
+    const lines = [headers.join(',')];
+    rows.forEach(function (r) {
+      lines.push(headers.map(function (h) {
+        var v = r[h] != null ? String(r[h]) : '';
+        if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0) {
+          v = '"' + v.replace(/"/g, '""') + '"';
+        }
+        return v;
+      }).join(','));
+    });
+    document.getElementById('importText').value = lines.join('\n');
+    document.getElementById('importPreview').textContent = rows.length + ' rows loaded from tab "' + tab + '". Click Import to save.';
+    if (status) status.textContent = 'Loaded ' + rows.length + ' rows from "' + tab + '".';
+    App.toast(rows.length + ' rows loaded from Google Sheet', 'success');
+  } catch (err) {
+    console.error(err);
+    if (status) status.textContent = 'Error: ' + (err.message || err);
+    App.toast('Could not load sheet: ' + (err.message || err), 'error');
+  }
+}
+
+
+

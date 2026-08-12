@@ -11,7 +11,7 @@ const DB = {
    * Example: 'https://script.google.com/macros/s/XXXX/exec'
    * Leave empty '' to use localStorage only.
    */
-  GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby3qJWPOhWQVzdCrKlarYzNY2RmoaUrm1yNTUVM1gMPzvx1WKHqfUk7RVaNldB33ygW/exec',
+  GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyH0iCPNUk0tBFX1kxffTJP7TZ7sKppK0eeyVdCyo1t_9dq-uf1vNqhgx_gzQ-RPHi4/exec',
 
   syncState: 'idle',
   lastError: null,
@@ -32,6 +32,7 @@ const DB = {
       seatings: [],
       duties: [],
       attendance: [],
+      history: [],
       settings: {
         college_name: 'Greenwood College of Arts & Science',
         academic_year: '2025-26',
@@ -133,6 +134,28 @@ const DB = {
     return data;
   },
 
+  /** Record an activity entry (synced with full DB to Google Sheet) */
+  log(action, details) {
+    try {
+      const session = (this.get().session) || {};
+      this.update(data => {
+        if (!data.history) data.history = [];
+        data.history.unshift({
+          id: this.nextId(data.history),
+          at: new Date().toISOString(),
+          action: String(action || 'action'),
+          details: String(details || ''),
+          user: session.username || session.name || 'system',
+          role: session.role || ''
+        });
+        // keep last 500 entries
+        if (data.history.length > 500) data.history = data.history.slice(0, 500);
+      });
+    } catch (e) {
+      console.warn('log failed', e);
+    }
+  },
+
   hash(pw) {
     let h = 0;
     for (let i = 0; i < pw.length; i++) h = ((h << 5) - h) + pw.charCodeAt(i) | 0;
@@ -141,7 +164,8 @@ const DB = {
 
   nextId(arr) {
     if (!arr || !arr.length) return 1;
-    return Math.max.apply(null, arr.map(function (x) { return x.id; })) + 1;
+    var ids = arr.map(function (x) { return Number(x.id) || 0; });
+    return Math.max.apply(null, ids) + 1;
   },
 
   buildSeed() {
@@ -303,6 +327,7 @@ const DB = {
     ];
 
     data.attendance = [];
+    data.history = data.history || [];
     data.seeded = true;
     return data;
   },
