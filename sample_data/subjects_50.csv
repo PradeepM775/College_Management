@@ -1,0 +1,51 @@
+subject_code,name,department_code,semester,credits
+CS101,Programming in C,BSC-CS,1,4
+CS102,Digital Logic,BSC-CS,1,3
+CS201,Data Structures,BSC-CS,3,4
+CS202,Database Management Systems,BSC-CS,3,4
+CS301,Operating Systems,BSC-CS,5,4
+CS302,Computer Networks,BSC-CS,5,4
+CS303,Software Engineering,BSC-CS,5,3
+CS401,Artificial Intelligence,BSC-CS,6,4
+MA101,Algebra and Calculus,BSC-MATH,1,4
+MA201,Linear Algebra,BSC-MATH,3,4
+MA202,Differential Equations,BSC-MATH,3,4
+MA301,Real Analysis,BSC-MATH,5,4
+MA302,Abstract Algebra,BSC-MATH,5,4
+PH101,Mechanics,BSC-PHY,1,4
+PH201,Electromagnetism,BSC-PHY,3,4
+PH301,Quantum Physics,BSC-PHY,5,4
+CH101,General Chemistry,BSC-CHEM,1,4
+CH201,Organic Chemistry,BSC-CHEM,3,4
+CH301,Physical Chemistry,BSC-CHEM,5,4
+BI101,Cell Biology,BSC-BIO,1,4
+BI201,Genetics,BSC-BIO,3,4
+EN101,Prose and Poetry,BA-ENG,1,3
+EN201,British Literature,BA-ENG,3,3
+EN301,Literary Criticism,BA-ENG,5,3
+EN302,Indian Writing in English,BA-ENG,5,3
+HI101,Ancient India,BA-HIS,1,3
+HI201,Medieval India,BA-HIS,3,3
+HI301,Modern India,BA-HIS,5,3
+EC101,Microeconomics,BA-ECO,1,4
+EC201,Macroeconomics,BA-ECO,3,4
+EC301,Indian Economy,BA-ECO,5,4
+TA101,Tamil Ilakkiyam,BA-TAM,1,3
+TA201,Tamil Grammar,BA-TAM,3,3
+CM101,Financial Accounting,BCOM,1,4
+CM201,Corporate Accounting,BCOM,3,4
+CM301,Cost Accounting,BCOM,5,4
+CM302,Business Law,BCOM,5,3
+CA101,Office Automation,BCOM-CA,1,3
+CA201,Tally and ERP,BCOM-CA,3,4
+BB101,Principles of Management,BBA,1,4
+BB201,Marketing Management,BBA,3,4
+BB301,Human Resource Management,BBA,5,4
+BC101,Computer Fundamentals,BCA,1,4
+BC201,Object Oriented Programming,BCA,3,4
+BC301,Web Technology,BCA,5,4
+ST101,Descriptive Statistics,BSC-STAT,1,4
+ST201,Probability Theory,BSC-STAT,3,4
+MB101,Microbial Diversity,BSC-MICRO,1,4
+BT101,Introduction to Biotechnology,BSC-BT,1,4
+GE101,Environmental Studies,BSC-CS,1,2

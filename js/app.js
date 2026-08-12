@@ -132,16 +132,16 @@ function handleLogin(e) {
   async function doLogin() {
     if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
     try {
-      // Pull latest shared DB (lock lives here)
+      // Pull latest shared DB (lock lives here) — READ only, never wipe
       await DB.refreshFromRemote();
 
       let data = DB.get();
+      // Ensure admin user exists LOCALLY only — never push empty shell to Sheet
       if (!data.users || !data.users.length) {
-        const empty = DB.buildEmpty();
-        DB._cache = empty;
-        DB.saveLocal(empty);
-        if (DB.useGoogle()) await DB.pushToGoogle(empty);
-        data = DB.get();
+        DB.ensureAdminUser(data);
+        DB._cache = data;
+        DB.saveLocal(data);
+        // Do NOT push empty data to Google Sheet
       }
 
       const user = (data.users || []).find(u =>
@@ -316,77 +316,99 @@ function filterTimetable() {
 }
 
 /* ========== STUDENT SEAT FINDER ========== */
-function findSeat(e) {
+async function findSeat(e) {
   e.preventDefault();
   const raw = document.getElementById('regNumber').value.trim();
   const reg = raw.toUpperCase();
   const area = document.getElementById('resultArea');
+  const btn = e.target && e.target.querySelector ? e.target.querySelector('button[type="submit"]') : null;
   if (!reg) {
     App.toast('Please enter a register number', 'warning');
     return;
   }
 
-  const data = DB.get();
-  const student = data.students.find(s =>
-    String(s.register_number).trim().toUpperCase() === reg && s.status === 'Active'
-  );
+  if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
+  area.innerHTML = '<div class="card"><div class="card-body empty-state"><p>Loading latest seating…</p></div></div>';
 
-  if (!student) {
+  try {
+    // Always pull latest from Google Sheet so students see admin's latest seating
+    if (DB.useGoogle()) {
+      await DB.refreshFromRemote();
+    } else if (DB.initPromise) {
+      await DB.initPromise;
+    }
+
+    const data = DB.get();
+    const student = (data.students || []).find(s =>
+      String(s.register_number).trim().toUpperCase() === reg &&
+      (!s.status || s.status === 'Active')
+    );
+
+    if (!student) {
+      area.innerHTML = `<div class="card"><div class="card-body empty-state">
+        <h3>Register number not found</h3>
+        <p>No student matches “${raw}”. Check the number and try again.</p>
+      </div></div>`;
+      return;
+    }
+
+    const seatings = (data.seatings || []).filter(s => s.student_id === student.id);
+    if (!seatings.length) {
+      area.innerHTML = `<div class="card"><div class="card-body empty-state">
+        <h3>${student.name}</h3>
+        <p>Register number ${student.register_number} is registered, but no seating arrangement is available yet.</p>
+      </div></div>`;
+      return;
+    }
+
+    const s = seatings[0];
+    const exam = (data.exams || []).find(x => x.id === s.exam_id);
+    const hall = App.hallById(s.hall_id);
+    const desk = App.deskById(s.desk_id);
+
+    let html = `<div class="result-card">
+      <div class="result-header">
+        <h3>Student Exam Details</h3>
+        <div class="exam-name">${exam ? exam.name : ''}</div>
+      </div>
+      <div class="result-body">
+        <div class="result-grid">
+          <div class="result-item"><label>Student Name</label><span>${student.name}</span></div>
+          <div class="result-item"><label>Register Number</label><span>${student.register_number}</span></div>
+          <div class="result-item"><label>Class</label><span>${App.className(student.class_id)}</span></div>
+          <div class="result-item"><label>Department</label><span>${App.deptName(student.department_id)}</span></div>
+          <div class="result-item"><label>Subject</label><span>${exam ? App.subjectName(exam.subject_id) : ''}</span></div>
+          <div class="result-item"><label>Date</label><span>${exam ? App.formatDate(exam.date) + ' (' + exam.day + ')' : ''}</span></div>
+          <div class="result-item"><label>Time</label><span>${exam ? exam.start_time + ' – ' + exam.end_time : ''}</span></div>
+          <div class="result-item"><label>Hall</label><span>${hall ? hall.hall_number : ''}</span></div>
+          <div class="result-item"><label>Building</label><span>${hall ? hall.building + (hall.block ? ' / ' + hall.block : '') : ''}</span></div>
+          <div class="result-item"><label>Floor</label><span>${hall ? hall.floor : ''}</span></div>
+          <div class="result-item"><label>Desk Number</label><span>${desk ? desk.desk_number : ''}</span></div>
+          <div class="result-item"><label>Row / Column</label><span>Row ${desk ? desk.row : ''}, Column ${desk ? desk.column : ''}</span></div>
+        </div>
+        <div class="seat-highlight">
+          <div class="label">Your Assigned Seat</div>
+          <div class="value">Desk ${desk ? desk.desk_number : ''}</div>
+          <div class="text-muted" style="font-size:0.85rem;margin-top:4px;">Row ${desk ? desk.row : ''} · Column ${desk ? desk.column : ''}</div>
+        </div>
+        <div class="mt-3">
+          <h4 class="text-center mb-2" style="font-size:0.95rem;">Seating Arrangement — ${hall ? hall.hall_number : ''}</h4>
+          <div id="seatMap" class="seating-grid"></div>
+        </div>
+      </div>
+    </div>`;
+
+    area.innerHTML = html;
+    renderHallMap('seatMap', s.hall_id, s.exam_id, desk ? desk.desk_number : null);
+  } catch (err) {
+    console.error(err);
     area.innerHTML = `<div class="card"><div class="card-body empty-state">
-      <h3>Register number not found</h3>
-      <p>No student matches “${raw}”. Check the number and try again.</p>
+      <h3>Could not load data</h3>
+      <p>Check internet connection and try again.</p>
     </div></div>`;
-    return;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Find My Seat'; }
   }
-
-  const seatings = data.seatings.filter(s => s.student_id === student.id);
-  if (!seatings.length) {
-    area.innerHTML = `<div class="card"><div class="card-body empty-state">
-      <h3>${student.name}</h3>
-      <p>Register number ${student.register_number} is registered, but no seating arrangement is available yet.</p>
-    </div></div>`;
-    return;
-  }
-
-  const s = seatings[0];
-  const exam = data.exams.find(x => x.id === s.exam_id);
-  const hall = App.hallById(s.hall_id);
-  const desk = App.deskById(s.desk_id);
-
-  let html = `<div class="result-card">
-    <div class="result-header">
-      <h3>Student Exam Details</h3>
-      <div class="exam-name">${exam ? exam.name : ''}</div>
-    </div>
-    <div class="result-body">
-      <div class="result-grid">
-        <div class="result-item"><label>Student Name</label><span>${student.name}</span></div>
-        <div class="result-item"><label>Register Number</label><span>${student.register_number}</span></div>
-        <div class="result-item"><label>Class</label><span>${App.className(student.class_id)}</span></div>
-        <div class="result-item"><label>Department</label><span>${App.deptName(student.department_id)}</span></div>
-        <div class="result-item"><label>Subject</label><span>${exam ? App.subjectName(exam.subject_id) : ''}</span></div>
-        <div class="result-item"><label>Date</label><span>${exam ? App.formatDate(exam.date) + ' (' + exam.day + ')' : ''}</span></div>
-        <div class="result-item"><label>Time</label><span>${exam ? exam.start_time + ' – ' + exam.end_time : ''}</span></div>
-        <div class="result-item"><label>Hall</label><span>${hall ? hall.hall_number : ''}</span></div>
-        <div class="result-item"><label>Building</label><span>${hall ? hall.building + (hall.block ? ' / ' + hall.block : '') : ''}</span></div>
-        <div class="result-item"><label>Floor</label><span>${hall ? hall.floor : ''}</span></div>
-        <div class="result-item"><label>Desk Number</label><span>${desk ? desk.desk_number : ''}</span></div>
-        <div class="result-item"><label>Row / Column</label><span>Row ${desk ? desk.row : ''}, Column ${desk ? desk.column : ''}</span></div>
-      </div>
-      <div class="seat-highlight">
-        <div class="label">Your Assigned Seat</div>
-        <div class="value">Desk ${desk ? desk.desk_number : ''}</div>
-        <div class="text-muted" style="font-size:0.85rem;margin-top:4px;">Row ${desk ? desk.row : ''} · Column ${desk ? desk.column : ''}</div>
-      </div>
-      <div class="mt-3">
-        <h4 class="text-center mb-2" style="font-size:0.95rem;">Seating Arrangement — ${hall ? hall.hall_number : ''}</h4>
-        <div id="seatMap" class="seating-grid"></div>
-      </div>
-    </div>
-  </div>`;
-
-  area.innerHTML = html;
-  renderHallMap('seatMap', s.hall_id, s.exam_id, desk ? desk.desk_number : null);
 }
 
 function renderHallMap(containerId, hallId, examId, highlightDesk) {

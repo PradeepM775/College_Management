@@ -1,98 +1,121 @@
 # CEMS — College Exam Management & Seating System
 
-Pure HTML / CSS / JavaScript. Database can use **Google Sheets** or browser localStorage.
+**Pure HTML + CSS + JavaScript.** No Python. No server install.
+
+Open `index.html` in Chrome / Edge, or host the folder on GitHub Pages / any static host.
+
+Data is stored in **Google Sheets** (shared database). Browser keeps a fast local cache.
 
 ---
 
-## Google Sheets setup (recommended)
+## How it works
 
-### Step 1 — Create a Google Sheet
-1. Go to [sheets.google.com](https://sheets.google.com)
-2. Create a blank spreadsheet (name it e.g. `CEMS Database`)
+| Who | What they do |
+|-----|----------------|
+| **Admin** | Login → add students, halls, exams → generate seating → logout |
+| **Students** | Open site → Find My Seat → enter register number → see hall & desk |
+| **Faculty** | Login → view duty / mark attendance |
 
-### Step 2 — Add Apps Script
-1. In the sheet: **Extensions → Apps Script**
-2. Delete any default code
-3. Open the project file `google-apps-script.js` and **copy all of it**
-4. Paste into the Apps Script editor
-5. Click **Save** (disk icon)
+All admin changes save to **Google Sheet**.  
+Students always read the **latest** seating from the Sheet.
 
-### Step 3 — Deploy as Web App
-1. Click **Deploy → New deployment**
-2. Gear icon → choose **Web app**
-3. Settings:
-   - **Execute as:** Me
-   - **Who has access:** Anyone
-4. Click **Deploy**
-5. Authorize your Google account when asked
-6. **Copy the Web App URL**  
-   (looks like `https://script.google.com/macros/s/XXXX/exec`)
+Refresh does **not** delete Sheet data.
 
-### Step 4 — Connect the website
-1. Open `js/db.js`
-2. Find this line:
+---
+
+## One-time Google Sheet setup
+
+1. Create a Google Spreadsheet.
+2. **Extensions → Apps Script**
+3. Delete any code → paste full contents of `google-apps-script.js`
+4. **Save**
+5. **Deploy → New deployment → Web app**
+   - Execute as: **Me**
+   - Who has access: **Anyone**
+6. Copy the Web App URL
+7. Paste it in `js/db.js`:
 
 ```js
-GOOGLE_SCRIPT_URL: '',
+GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_ID/exec',
 ```
 
-3. Paste your URL:
+Or set it later in Admin → Settings → Google Sheet URL.
 
-```js
-GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/XXXX/exec',
-```
-
-4. Save the file
-
-### Step 5 — Open the website
-- Open `index.html` in the browser (or host the folder)
-- First load will seed demo data into the Google Sheet
-- Any add / edit / delete on the website is saved to the Sheet
-- Reload / another browser loads the same Sheet data
+After any script change: **Deploy → Manage deployments → Edit → New version → Deploy**
 
 ---
 
-## How sync works
-
-| Action on website | Result |
-|-------------------|--------|
-| Add student / exam / hall | Saved to Google Sheet |
-| Edit / delete | Updated in Google Sheet |
-| Generate seating | Saved to Google Sheet |
-| Open site on another PC | Loads latest Sheet data |
-
-If the internet is down, the site uses localStorage cache until online again.
-
----
-
-## Without Google Sheets
-Leave `GOOGLE_SCRIPT_URL` as `''`. Data stays in the browser only (localStorage).
-
----
-
-## Demo login
-
-| Role    | Username | Password    |
-|---------|----------|-------------|
-| Admin   | admin    | admin123    |
-| Faculty | FAC001   | faculty123  |
-
-Student seat search: `24001` – `24038`
-
----
-
-## Files
+## Run (no install)
 
 ```
 cems-static/
-├── index.html
-├── login.html
-├── find-seat.html
-├── admin.html
-├── faculty.html
-├── css/style.css
-├── js/db.js                 ← put Google Script URL here
-├── js/app.js
-├── google-apps-script.js    ← paste into Apps Script
-└── README.md
+  index.html      ← double-click this
+  login.html
+  admin.html
+  find-seat.html
+  faculty.html
+  css/
+  js/
+  google-apps-script.js
 ```
+
+Or upload the whole folder to **GitHub Pages**.
+
+---
+
+## Login
+
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | `admin` | `admin123` |
+| Faculty | faculty ID (e.g. FAC001) | set by admin |
+
+Change admin password after first login if needed (edit user in data / Settings).
+
+---
+
+## Admin checklist
+
+1. Departments → Classes → Subjects  
+2. Students (CSV import OK for 60–300+)  
+3. Faculty  
+4. Exam Halls (rows × columns)  
+5. Examinations  
+6. Seating Arrangement → Generate  
+7. Done — students can search seats  
+
+---
+
+## Student flow
+
+1. Open site (phone OK)  
+2. **Find My Seat**  
+3. Enter register number  
+4. See hall, desk, map  
+
+---
+
+## Important rules
+
+- **One admin device** at a time (avoids Sheet overwrite conflicts).
+- Do **not** use Settings → Reset unless you want to wipe everything.
+- Internet needed for Sheet sync; without internet, local cache still shows last data.
+- 100+ students reading seats is fine (read-only from Sheet).
+
+---
+
+## Files you need
+
+| File | Purpose |
+|------|---------|
+| `index.html` | Home |
+| `login.html` | Login |
+| `admin.html` | Admin panel |
+| `find-seat.html` | Student seat search |
+| `faculty.html` | Faculty portal |
+| `js/db.js` | Database + Sheet sync |
+| `js/app.js` | UI logic |
+| `css/style.css` | Design |
+| `google-apps-script.js` | Sheet backend (paste in Apps Script) |
+
+Python / `server.py` is **not required**.

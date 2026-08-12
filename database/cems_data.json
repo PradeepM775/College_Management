@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "hg10hvh",
+      "role": "admin",
+      "name": "Administrator"
+    }
+  ],
+  "departments": [],
+  "classes": [],
+  "students": [],
+  "faculty": [],
+  "subjects": [],
+  "halls": [],
+  "desks": [],
+  "exams": [],
+  "participants": [],
+  "seatings": [],
+  "duties": [],
+  "attendance": [],
+  "history": [],
+  "settings": {
+    "college_name": "College Name",
+    "academic_year": "2025-26",
+    "default_seating_strategy": "alternate"
+  },
+  "session": null,
+  "admin_lock": null,
+  "seeded": true
+}

@@ -9,6 +9,9 @@
  *
  * Supported actions:
  *   load, save, ping, importStudents, listSheets
+ *
+ * SAFETY: save will REJECT empty data if sheet already has real records
+ * (unless body.force === true — used only by explicit Reset).
  */
 
 var DATA_SHEET = 'CEMS_DATA';
@@ -42,17 +45,30 @@ function handleRequest_(e, body) {
     }
 
     if (action === 'ping' || action === 'health') {
-      return json_({ success: true, message: 'CEMS API online', version: 3 });
+      return json_({ success: true, message: 'CEMS API online', version: 4 });
     }
 
     if (action === 'load' || action === 'get') {
-      return json_({ success: true, data: loadDatabase_() });
+      var data = loadDatabase_();
+      return json_({ success: true, data: data });
     }
 
     if (action === 'save' || action === 'put') {
       if (!body.data) return json_({ success: false, message: 'No data provided' });
+
+      // SAFETY: block empty overwrite of existing real data
+      if (!body.force && isEmptyData_(body.data)) {
+        var existing = loadDatabase_();
+        if (existing && hasRealData_(existing)) {
+          return json_({
+            success: false,
+            message: 'Blocked: incoming data is empty but sheet has real data. Refresh the website and try again. Use force only for intentional Reset.'
+          });
+        }
+      }
+
       saveDatabase_(body.data);
-      return json_({ success: true, message: 'Saved' });
+      return json_({ success: true, message: 'Saved', version: 4 });
     }
 
     if (action === 'importstudents') {
@@ -67,7 +83,7 @@ function handleRequest_(e, body) {
 
     return json_({
       success: false,
-      message: 'Unknown action: ' + action + '. Deploy latest google-apps-script.js (version 3).'
+      message: 'Unknown action: ' + action + '. Deploy latest google-apps-script.js (version 4).'
     });
   } catch (err) {
     return json_({ success: false, message: String(err) });
@@ -78,6 +94,20 @@ function json_(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function hasRealData_(data) {
+  if (!data) return false;
+  var keys = ['students', 'faculty', 'departments', 'classes', 'subjects', 'halls', 'exams', 'seatings', 'duties', 'attendance'];
+  for (var i = 0; i < keys.length; i++) {
+    var arr = data[keys[i]];
+    if (arr && arr.length > 0) return true;
+  }
+  return false;
+}
+
+function isEmptyData_(data) {
+  return !hasRealData_(data);
 }
 
 function listSheetNames_() {
@@ -145,7 +175,11 @@ function loadDatabase_() {
       map[key] = val;
     }
   }
-  if (map._full) return map._full;
+  if (map._full) {
+    // Ensure seeded flag is true if any real data exists
+    if (!map._full.seeded && hasRealData_(map._full)) map._full.seeded = true;
+    return map._full;
+  }
   return {
     users: map.users || [],
     departments: map.departments || [],
@@ -164,7 +198,7 @@ function loadDatabase_() {
     admin_lock: map.admin_lock || null,
     settings: map.settings || {},
     session: null,
-    seeded: !!map.seeded
+    seeded: true
   };
 }
 
@@ -174,9 +208,10 @@ function saveDatabase_(data) {
   sheet.getRange(1, 1, 1, 2).setValues([['key', 'value']]);
   var clone = JSON.parse(JSON.stringify(data));
   clone.session = null;
+  clone.seeded = true;
   var rows = [
     ['_full', JSON.stringify(clone)],
-    ['seeded', clone.seeded ? 'true' : 'false'],
+    ['seeded', 'true'],
     ['updated_at', new Date().toISOString()],
     ['students_count', String((clone.students || []).length)],
     ['faculty_count', String((clone.faculty || []).length)],

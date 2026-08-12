@@ -1,0 +1,51 @@
+name,department_code,course,year,section,academic_year
+I B.Sc Computer Science,BSC-CS,B.Sc Computer Science,1,A,2025-26
+II B.Sc Computer Science,BSC-CS,B.Sc Computer Science,2,A,2025-26
+III B.Sc Computer Science,BSC-CS,B.Sc Computer Science,3,A,2025-26
+I B.Sc Mathematics,BSC-MATH,B.Sc Mathematics,1,A,2025-26
+II B.Sc Mathematics,BSC-MATH,B.Sc Mathematics,2,A,2025-26
+III B.Sc Mathematics,BSC-MATH,B.Sc Mathematics,3,A,2025-26
+I B.Sc Physics,BSC-PHY,B.Sc Physics,1,A,2025-26
+II B.Sc Physics,BSC-PHY,B.Sc Physics,2,A,2025-26
+III B.Sc Physics,BSC-PHY,B.Sc Physics,3,A,2025-26
+I B.Sc Chemistry,BSC-CHEM,B.Sc Chemistry,1,A,2025-26
+II B.Sc Chemistry,BSC-CHEM,B.Sc Chemistry,2,A,2025-26
+III B.Sc Chemistry,BSC-CHEM,B.Sc Chemistry,3,A,2025-26
+I B.Sc Biology,BSC-BIO,B.Sc Biology,1,A,2025-26
+II B.Sc Biology,BSC-BIO,B.Sc Biology,2,A,2025-26
+III B.Sc Biology,BSC-BIO,B.Sc Biology,3,A,2025-26
+I B.A English,BA-ENG,B.A English,1,A,2025-26
+II B.A English,BA-ENG,B.A English,2,A,2025-26
+III B.A English,BA-ENG,B.A English,3,A,2025-26
+I B.A History,BA-HIS,B.A History,1,A,2025-26
+II B.A History,BA-HIS,B.A History,2,A,2025-26
+III B.A History,BA-HIS,B.A History,3,A,2025-26
+I B.A Economics,BA-ECO,B.A Economics,1,A,2025-26
+II B.A Economics,BA-ECO,B.A Economics,2,A,2025-26
+III B.A Economics,BA-ECO,B.A Economics,3,A,2025-26
+I B.A Tamil,BA-TAM,B.A Tamil,1,A,2025-26
+II B.A Tamil,BA-TAM,B.A Tamil,2,A,2025-26
+III B.A Tamil,BA-TAM,B.A Tamil,3,A,2025-26
+I B.Com,BCOM,B.Com,1,A,2025-26
+II B.Com,BCOM,B.Com,2,A,2025-26
+III B.Com,BCOM,B.Com,3,A,2025-26
+I B.Com Computer Applications,BCOM-CA,B.Com Computer Applications,1,A,2025-26
+II B.Com Computer Applications,BCOM-CA,B.Com Computer Applications,2,A,2025-26
+III B.Com Computer Applications,BCOM-CA,B.Com Computer Applications,3,A,2025-26
+I B.B.A,BBA,B.B.A,1,A,2025-26
+II B.B.A,BBA,B.B.A,2,A,2025-26
+III B.B.A,BBA,B.B.A,3,A,2025-26
+I B.C.A,BCA,B.C.A,1,A,2025-26
+II B.C.A,BCA,B.C.A,2,A,2025-26
+III B.C.A,BCA,B.C.A,3,A,2025-26
+I M.Sc Computer Science,MSC-CS,M.Sc Computer Science,1,A,2025-26
+II M.Sc Computer Science,MSC-CS,M.Sc Computer Science,2,A,2025-26
+III M.Sc Computer Science,MSC-CS,M.Sc Computer Science,3,A,2025-26
+I M.Sc Mathematics,MSC-MATH,M.Sc Mathematics,1,A,2025-26
+II M.Sc Mathematics,MSC-MATH,M.Sc Mathematics,2,A,2025-26
+III M.Sc Mathematics,MSC-MATH,M.Sc Mathematics,3,A,2025-26
+I M.A English,MA-ENG,M.A English,1,A,2025-26
+II M.A English,MA-ENG,M.A English,2,A,2025-26
+III M.A English,MA-ENG,M.A English,3,A,2025-26
+I M.Com,MCOM,M.Com,1,A,2025-26
+II M.Com,MCOM,M.Com,2,A,2025-26

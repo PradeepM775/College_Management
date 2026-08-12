@@ -1,0 +1,51 @@
+register_number,name,gender,department_code,class_name,year,email,phone
+25001,Aarav Sharma,Male,BSC-CS,I B.Sc Computer Science,1,aarav.sharma25001@college.edu,9720000000
+25002,Aditi Patel,Female,BSC-CS,II B.Sc Computer Science,2,aditi.patel25002@college.edu,9720002222
+25003,Arjun Kumar,Male,BSC-CS,III B.Sc Computer Science,3,arjun.kumar25003@college.edu,9720004444
+25004,Ananya Singh,Female,BSC-MATH,I B.Sc Mathematics,1,ananya.singh25004@college.edu,9720006666
+25005,Rohan Reddy,Male,BSC-MATH,II B.Sc Mathematics,2,rohan.reddy25005@college.edu,9720008888
+25006,Priya Nair,Female,BSC-MATH,III B.Sc Mathematics,3,priya.nair25006@college.edu,9720011110
+25007,Vikram Gupta,Male,BSC-PHY,I B.Sc Physics,1,vikram.gupta25007@college.edu,9720013332
+25008,Sneha Iyer,Female,BSC-PHY,II B.Sc Physics,2,sneha.iyer25008@college.edu,9720015554
+25009,Karan Joshi,Male,BSC-PHY,III B.Sc Physics,3,karan.joshi25009@college.edu,9720017776
+25010,Meera Mehta,Female,BSC-CHEM,I B.Sc Chemistry,1,meera.mehta25010@college.edu,9720019998
+25011,Rahul Pillai,Male,BSC-CHEM,II B.Sc Chemistry,2,rahul.pillai25011@college.edu,9720022220
+25012,Divya Das,Female,BSC-CHEM,III B.Sc Chemistry,3,divya.das25012@college.edu,9720024442
+25013,Amit Rao,Male,BSC-BIO,I B.Sc Biology,1,amit.rao25013@college.edu,9720026664
+25014,Pooja Menon,Female,BSC-BIO,II B.Sc Biology,2,pooja.menon25014@college.edu,9720028886
+25015,Suresh Krishnan,Male,BSC-BIO,III B.Sc Biology,3,suresh.krishnan25015@college.edu,9720031108
+25016,Kavya Sharma,Female,BA-ENG,I B.A English,1,kavya.sharma25016@college.edu,9720033330
+25017,Nikhil Patel,Male,BA-ENG,II B.A English,2,nikhil.patel25017@college.edu,9720035552
+25018,Riya Kumar,Female,BA-ENG,III B.A English,3,riya.kumar25018@college.edu,9720037774
+25019,Varun Singh,Male,BA-HIS,I B.A History,1,varun.singh25019@college.edu,9720039996
+25020,Isha Reddy,Female,BA-HIS,II B.A History,2,isha.reddy25020@college.edu,9720042218
+25021,Siddharth Nair,Male,BA-HIS,III B.A History,3,siddharth.nair25021@college.edu,9720044440
+25022,Neha Gupta,Female,BA-ECO,I B.A Economics,1,neha.gupta25022@college.edu,9720046662
+25023,Abhishek Iyer,Male,BA-ECO,II B.A Economics,2,abhishek.iyer25023@college.edu,9720048884
+25024,Shreya Joshi,Female,BA-ECO,III B.A Economics,3,shreya.joshi25024@college.edu,9720051106
+25025,Manish Mehta,Male,BA-TAM,I B.A Tamil,1,manish.mehta25025@college.edu,9720053328
+25026,Anjali Pillai,Female,BA-TAM,II B.A Tamil,2,anjali.pillai25026@college.edu,9720055550
+25027,Deepak Das,Male,BA-TAM,III B.A Tamil,3,deepak.das25027@college.edu,9720057772
+25028,Swati Rao,Female,BCOM,I B.Com,1,swati.rao25028@college.edu,9720059994
+25029,Rajesh Menon,Male,BCOM,II B.Com,2,rajesh.menon25029@college.edu,9720062216
+25030,Lakshmi Krishnan,Female,BCOM,III B.Com,3,lakshmi.krishnan25030@college.edu,9720064438
+25031,Karthik Sharma,Male,BCOM-CA,I B.Com Computer Applications,1,karthik.sharma25031@college.edu,9720066660
+25032,Harini Patel,Female,BCOM-CA,II B.Com Computer Applications,2,harini.patel25032@college.edu,9720068882
+25033,Gokul Kumar,Male,BCOM-CA,III B.Com Computer Applications,3,gokul.kumar25033@college.edu,9720071104
+25034,Nandini Singh,Female,BBA,I B.B.A,1,nandini.singh25034@college.edu,9720073326
+25035,Mohan Reddy,Male,BBA,II B.B.A,2,mohan.reddy25035@college.edu,9720075548
+25036,Swetha Nair,Female,BBA,III B.B.A,3,swetha.nair25036@college.edu,9720077770
+25037,Jagan Gupta,Male,BCA,I B.C.A,1,jagan.gupta25037@college.edu,9720079992
+25038,Aishwarya Iyer,Female,BCA,II B.C.A,2,aishwarya.iyer25038@college.edu,9720082214
+25039,Vignesh Joshi,Male,BCA,III B.C.A,3,vignesh.joshi25039@college.edu,9720084436
+25040,Keerthana Mehta,Female,MSC-CS,I M.Sc Computer Science,1,keerthana.mehta25040@college.edu,9720086658
+25041,Sanjay Pillai,Male,MSC-CS,II M.Sc Computer Science,2,sanjay.pillai25041@college.edu,9720088880
+25042,Pavithra Das,Female,MSC-CS,III M.Sc Computer Science,3,pavithra.das25042@college.edu,9720091102
+25043,Dinesh Rao,Male,MSC-MATH,I M.Sc Mathematics,1,dinesh.rao25043@college.edu,9720093324
+25044,Janani Menon,Female,MSC-MATH,II M.Sc Mathematics,2,janani.menon25044@college.edu,9720095546
+25045,Praveen Krishnan,Male,MSC-MATH,III M.Sc Mathematics,3,praveen.krishnan25045@college.edu,9720097768
+25046,Nisha Sharma,Female,MA-ENG,I M.A English,1,nisha.sharma25046@college.edu,9720099990
+25047,Yogesh Patel,Male,MA-ENG,II M.A English,2,yogesh.patel25047@college.edu,9720102212
+25048,Soundarya Kumar,Female,MA-ENG,III M.A English,3,soundarya.kumar25048@college.edu,9720104434
+25049,Aravind Singh,Male,MCOM,I M.Com,1,aravind.singh25049@college.edu,9720106656
+25050,Bhavani Reddy,Female,MCOM,II M.Com,2,bhavani.reddy25050@college.edu,9720108878

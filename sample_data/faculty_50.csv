@@ -1,0 +1,51 @@
+faculty_id,name,department_code,designation,email,phone,password
+FAC001,Dr. Ramesh Kumar,BSC-CS,Professor,ramesh.kumar1@college.edu,9810000000,faculty123
+FAC002,Prof. Sunita Rao,BSC-MATH,Associate Professor,sunita.rao2@college.edu,9810001111,faculty123
+FAC003,Mr. Anil Mehta,BSC-PHY,Assistant Professor,anil.mehta3@college.edu,9810002222,faculty123
+FAC004,Dr. Priya Nair,BSC-CHEM,Lecturer,priya.nair4@college.edu,9810003333,faculty123
+FAC005,Prof. Suresh Iyer,BSC-BIO,Senior Lecturer,suresh.iyer5@college.edu,9810004444,faculty123
+FAC006,Ms. Meena Sharma,BA-ENG,Professor,meena.sharma6@college.edu,9810005555,faculty123
+FAC007,Dr. Karthik Reddy,BA-HIS,Associate Professor,karthik.reddy7@college.edu,9810006666,faculty123
+FAC008,Prof. Lakshmi Pillai,BA-ECO,Assistant Professor,lakshmi.pillai8@college.edu,9810007777,faculty123
+FAC009,Mr. Vijay Das,BA-TAM,Lecturer,vijay.das9@college.edu,9810008888,faculty123
+FAC010,Dr. Divya Menon,BCOM,Senior Lecturer,divya.menon10@college.edu,9810009999,faculty123
+FAC011,Prof. Arun Patel,BCOM-CA,Professor,arun.patel11@college.edu,9810011110,faculty123
+FAC012,Ms. Kavitha Singh,BBA,Associate Professor,kavitha.singh12@college.edu,9810012221,faculty123
+FAC013,Dr. Rajesh Gupta,BCA,Assistant Professor,rajesh.gupta13@college.edu,9810013332,faculty123
+FAC014,Prof. Anitha Joshi,MSC-CS,Lecturer,anitha.joshi14@college.edu,9810014443,faculty123
+FAC015,Mr. Senthil Nambiar,MSC-MATH,Senior Lecturer,senthil.nambiar15@college.edu,9810015554,faculty123
+FAC016,Dr. Deepa Krishnan,MA-ENG,Professor,deepa.krishnan16@college.edu,9810016665,faculty123
+FAC017,Prof. Mohan Subramanian,MCOM,Associate Professor,mohan.subramanian17@college.edu,9810017776,faculty123
+FAC018,Ms. Shalini Thomas,BSC-STAT,Assistant Professor,shalini.thomas18@college.edu,9810018887,faculty123
+FAC019,Dr. Prakash Fernandes,BSC-MICRO,Lecturer,prakash.fernandes19@college.edu,9810019998,faculty123
+FAC020,Prof. Nithya Banerjee,BSC-BT,Senior Lecturer,nithya.banerjee20@college.edu,9810021109,faculty123
+FAC021,Mr. Ganesh Kumar,DEPT021,Professor,ganesh.kumar21@college.edu,9810022220,faculty123
+FAC022,Dr. Revathi Rao,DEPT022,Associate Professor,revathi.rao22@college.edu,9810023331,faculty123
+FAC023,Prof. Bala Mehta,DEPT023,Assistant Professor,bala.mehta23@college.edu,9810024442,faculty123
+FAC024,Ms. Sangeetha Nair,DEPT024,Lecturer,sangeetha.nair24@college.edu,9810025553,faculty123
+FAC025,Dr. Hari Iyer,DEPT025,Senior Lecturer,hari.iyer25@college.edu,9810026664,faculty123
+FAC026,Prof. Padma Sharma,DEPT026,Professor,padma.sharma26@college.edu,9810027775,faculty123
+FAC027,Mr. Naveen Reddy,DEPT027,Associate Professor,naveen.reddy27@college.edu,9810028886,faculty123
+FAC028,Dr. Geetha Pillai,DEPT028,Assistant Professor,geetha.pillai28@college.edu,9810029997,faculty123
+FAC029,Prof. Siva Das,DEPT029,Lecturer,siva.das29@college.edu,9810031108,faculty123
+FAC030,Ms. Uma Menon,DEPT030,Senior Lecturer,uma.menon30@college.edu,9810032219,faculty123
+FAC031,Dr. Dinesh Patel,DEPT031,Professor,dinesh.patel31@college.edu,9810033330,faculty123
+FAC032,Prof. Radha Singh,DEPT032,Associate Professor,radha.singh32@college.edu,9810034441,faculty123
+FAC033,Mr. Kumar Gupta,DEPT033,Assistant Professor,kumar.gupta33@college.edu,9810035552,faculty123
+FAC034,Dr. Vani Joshi,DEPT034,Lecturer,vani.joshi34@college.edu,9810036663,faculty123
+FAC035,Prof. Ashok Nambiar,DEPT035,Senior Lecturer,ashok.nambiar35@college.edu,9810037774,faculty123
+FAC036,Ms. Malathi Krishnan,DEPT036,Professor,malathi.krishnan36@college.edu,9810038885,faculty123
+FAC037,Dr. Ravi Subramanian,DEPT037,Associate Professor,ravi.subramanian37@college.edu,9810039996,faculty123
+FAC038,Prof. Jaya Thomas,DEPT038,Assistant Professor,jaya.thomas38@college.edu,9810041107,faculty123
+FAC039,Mr. Mani Fernandes,DEPT039,Lecturer,mani.fernandes39@college.edu,9810042218,faculty123
+FAC040,Dr. Sudha Banerjee,DEPT040,Senior Lecturer,sudha.banerjee40@college.edu,9810043329,faculty123
+FAC041,Prof. Pradeep Kumar,DEPT041,Professor,pradeep.kumar41@college.edu,9810044440,faculty123
+FAC042,Ms. Latha Rao,DEPT042,Associate Professor,latha.rao42@college.edu,9810045551,faculty123
+FAC043,Dr. Gopal Mehta,DEPT043,Assistant Professor,gopal.mehta43@college.edu,9810046662,faculty123
+FAC044,Prof. Indira Nair,DEPT044,Lecturer,indira.nair44@college.edu,9810047773,faculty123
+FAC045,Mr. Saravanan Iyer,DEPT045,Senior Lecturer,saravanan.iyer45@college.edu,9810048884,faculty123
+FAC046,Dr. Kala Sharma,DEPT046,Professor,kala.sharma46@college.edu,9810049995,faculty123
+FAC047,Prof. Murugan Reddy,DEPT047,Associate Professor,murugan.reddy47@college.edu,9810051106,faculty123
+FAC048,Ms. Chitra Pillai,DEPT048,Assistant Professor,chitra.pillai48@college.edu,9810052217,faculty123
+FAC049,Dr. Venkatesh Das,DEPT049,Lecturer,venkatesh.das49@college.edu,9810053328,faculty123
+FAC050,Prof. Bhuvana Menon,DEPT050,Senior Lecturer,bhuvana.menon50@college.edu,9810054439,faculty123
