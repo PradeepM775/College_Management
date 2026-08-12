@@ -33,7 +33,7 @@
         <a class="nav-item" data-panel="history" onclick="showPanel('history')">Activity History</a>
         <a class="nav-item" data-panel="settings" onclick="showPanel('settings')">Settings</a>
         <a class="nav-item" onclick="App.toggleTheme()">Theme</a>
-        <a class="nav-item" onclick="if(confirm('Reset all data to demo defaults?')){DB.reset().then(function(){location.reload();});}">Reset Data</a>
+        <a class="nav-item" onclick="if(confirm('Clear ALL data (students, faculty, departments, exams, halls, seating)? Only admin login will remain. This also clears Google Sheet.')){DB.reset().then(function(){location.reload();});}">Clear All Data</a>
         <a class="nav-item" onclick="App.logout()">Logout</a>
       </nav>
     </aside>

@@ -137,10 +137,10 @@ function handleLogin(e) {
 
       let data = DB.get();
       if (!data.users || !data.users.length) {
-        const seeded = DB.buildSeed();
-        DB._cache = seeded;
-        DB.saveLocal(seeded);
-        if (DB.useGoogle()) await DB.pushToGoogle(seeded);
+        const empty = DB.buildEmpty();
+        DB._cache = empty;
+        DB.saveLocal(empty);
+        if (DB.useGoogle()) await DB.pushToGoogle(empty);
         data = DB.get();
       }
 
